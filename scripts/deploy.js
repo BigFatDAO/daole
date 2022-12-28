@@ -1,56 +1,96 @@
-// This is a script for deploying your contracts. You can adapt it to deploy
-// yours, or create new ones.
+//launch script for deploying the daosystem
+// npx hardhat run --network localhost scripts/deploy.js
 
-const path = require("path");
+const hre = require("hardhat");
+const path = require('path');
 
 async function main() {
-  // This is just a convenience check
-  if (network.name === "hardhat") {
-    console.warn(
-      "You are trying to deploy a contract to the Hardhat Network, which" +
-        "gets automatically created and destroyed every time. Use the Hardhat" +
-        " option '--network localhost'"
-    );
-  }
+  // get a deployer address and 10 members addresses
+  const [deployer, member1, member2, member3, member4, member5, member6, member7, member8, member9, member10] = await hre.ethers.getSigners();
 
-  // ethers is available in the global scope
-  const [deployer] = await ethers.getSigners();
-  console.log(
-    "Deploying the contracts with the account:",
-    await deployer.getAddress()
-  );
+  //deploy WhiteList
+  const WhiteList = await hre.ethers.getContractFactory("WhiteList");
+  const whiteList = await WhiteList.deploy();
+  await whiteList.deployed();
+  console.log("WhiteList deployed to:", whiteList.address);
+  //save to the frontend
+  saveFrontendFiles("WhiteList", whiteList);
 
-  console.log("Account balance:", (await deployer.getBalance()).toString());
+  //add members to WhiteList
+  await whiteList.addToWhiteList(member1.address);
+  await whiteList.addToWhiteList(member2.address);
+  await whiteList.addToWhiteList(member3.address);
+  await whiteList.addToWhiteList(member4.address);
+  await whiteList.addToWhiteList(member5.address);
+  await whiteList.addToWhiteList(member6.address);
 
-  const Token = await ethers.getContractFactory("Token");
-  const token = await Token.deploy();
-  await token.deployed();
+  //log member 1 address
+  console.log("Member 1 address:", member1.address);
 
-  console.log("Token address:", token.address);
+  // deploy leader
+  const Leader = await hre.ethers.getContractFactory("Leader");
+  const leader = await Leader.deploy(whiteList.address);
+  await leader.deployed();
+  console.log("Leader deployed to:", leader.address);
+  //save to the frontend
+  saveFrontendFiles("Leader", leader);
 
-  // We also save the contract's artifacts and address in the frontend directory
-  saveFrontendFiles(token);
-}
+  //get sub factory address and deploy sub factory
+  const subFactoryAddress = await leader.subFactoryAddress();
 
-function saveFrontendFiles(token) {
+  //get voting address
+  const votingAddress = await leader.votingAddress();
+  //get voting contract at above address
+  const Voting = await hre.ethers.getContractFactory("Voting");
+  const voting = await Voting.attach(votingAddress);
+
+  // save voting and voting address to frontend
+  saveFrontendFiles("Voting", voting);
+
+  
+  //let whitelisted members create their subs
+  await whiteList.connect(member1).createSub(subFactoryAddress);
+  await whiteList.connect(member2).createSub(subFactoryAddress);
+  await whiteList.connect(member3).createSub(subFactoryAddress);
+  await whiteList.connect(member4).createSub(subFactoryAddress);
+  await whiteList.connect(member5).createSub(subFactoryAddress);
+  await whiteList.connect(member6).createSub(subFactoryAddress);
+
+  console.log("Subs created");
+
+  // save subdao artifact to frontend
+  const subDAOArtifact = artifacts.readArtifactSync("SubDAO");
   const fs = require("fs");
   const contractsDir = path.join(__dirname, "..", "frontend", "src", "contracts");
-
   if (!fs.existsSync(contractsDir)) {
     fs.mkdirSync(contractsDir);
   }
-
   fs.writeFileSync(
-    path.join(contractsDir, "contract-address.json"),
-    JSON.stringify({ Token: token.address }, undefined, 2)
+    path.join(contractsDir, "SubDAO.json"),
+    JSON.stringify(subDAOArtifact, null, 2)
   );
 
-  const TokenArtifact = artifacts.readArtifactSync("Token");
-
-  fs.writeFileSync(
-    path.join(contractsDir, "Token.json"),
-    JSON.stringify(TokenArtifact, null, 2)
-  );
+  // function to save to frontend
+  function saveFrontendFiles(contractName, contract) {
+    const fs = require("fs");
+    const contractsDir = path.join(__dirname, "..", "frontend", "src", "contracts");
+  
+    if (!fs.existsSync(contractsDir)) {
+      fs.mkdirSync(contractsDir);
+    }
+  
+    fs.writeFileSync(
+      path.join(contractsDir, contractName+"-address.json"),
+      JSON.stringify({ Address: contract.address }, undefined, 2)
+    );
+  
+    const contractArtifact = artifacts.readArtifactSync(contractName);
+  
+    fs.writeFileSync(
+      path.join(contractsDir, contractName + ".json"),
+      JSON.stringify(contractArtifact, null, 2)
+    );
+  }
 }
 
 main()
@@ -59,3 +99,5 @@ main()
     console.error(error);
     process.exit(1);
   });
+
+
