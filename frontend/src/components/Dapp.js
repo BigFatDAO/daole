@@ -1,8 +1,9 @@
 import React from "react";
 import { ethers } from "ethers";
 
-// import leader, club and whitelist artifacts
+// import leader, voting, club and whitelist artifacts
 import LeaderArtifact from "../contracts/Leader.json";
+import VotingArtifact from "../contracts/Voting.json";
 import WhiteListArtifact from "../contracts/WhiteList.json";
 import SubDAOArtifact from "../contracts/SubDAO.json";
 
@@ -13,14 +14,16 @@ import { Transfer } from "./Transfer";
 import { TransactionErrorMessage } from "./TransactionErrorMessage";
 import { WaitingForTransactionMessage } from "./WaitingForTransactionMessage";
 import { NonMemberMessage } from "./NonMemberMessage";
+import { MemberArea } from "./MemberArea";
 
 // get the contract addresses from the json files
 import LeaderAddress from "../contracts/Leader-address.json";
 import WhiteListAddress from "../contracts/WhiteList-address.json";
-import { MemberArea } from "./MemberArea";
+import VotingAddress from "../contracts/Voting-address.json";
 
 const leaderAddress = LeaderAddress.Address;
 const whiteListAddress = WhiteListAddress.Address;
+const votingAddress = VotingAddress.Address;
 
 
 const HARDHAT_NETWORK_ID = '1337';
@@ -126,9 +129,7 @@ export class Dapp extends React.Component {
 
         <div className="row">
           <div className="col-12">
-            {/*
-              If the user has no tokens, we don't show the Transfer form
-            */}
+            {/* if the user is not a member, we show a the NonMemberMessage */}
             {this.state.subDAOAddress === "0x0000000000000000000000000000000000000000" && (
               <NonMemberMessage selectedAddress={this.state.selectedAddress} />
             )}
@@ -137,11 +138,12 @@ export class Dapp extends React.Component {
               This is a component that shows the member all the information about their Club
               It contains functions for all the actions a member can do
             */}
-            {this.state.subDAOAddress != "0x0000000000000000000000000000000000000000" && (
+            {this.state.subDAOAddress !== "0x0000000000000000000000000000000000000000" && (
               <MemberArea
                 subAddress={this.state.subDAOAddress}
-              />
-            )}
+                transferTokens={(to, amount) => this._transferTokens(to, amount)}
+                tokenSymbol={this.state.tokenData.symbol}
+              />)}
           </div>
         </div>
       </div>
@@ -193,18 +195,9 @@ export class Dapp extends React.Component {
   }
 
   _initialize(userAddress) {
-    // This method initializes the dapp
-
-    // We first store the user's address in the component's state
     this.setState({
       selectedAddress: userAddress,
     });
-
-    // Then, we initialize ethers, fetch the token's data, and start polling
-    // for the user's balance.
-
-    // Fetching the token data and the user's balance are specific to this
-    // sample project, but you can reuse the same initialization pattern.
     this._initializeEthers();
     this._getTokenData();
     this._startPollingData();
@@ -223,8 +216,24 @@ export class Dapp extends React.Component {
 
     // find the subDAO address
     await this._getSubAddress();
-    console.log(this.state.subDAOAddress);
-    console.log(this.state.selectedAddress);
+
+    // if user is a member of a club, initialize the subDAO contract and the voting contract
+    if (this.state.subDAOAddress !== "0x0000000000000000000000000000000000000000") {
+      this._subDAO = new ethers.Contract(
+        this.state.subDAOAddress,
+        SubDAOArtifact.abi,
+        this._provider.getSigner(0)
+      );
+
+      this._voting = new ethers.Contract(
+        votingAddress,
+        VotingArtifact.abi,
+        this._provider.getSigner(0)
+      );
+    }
+
+    // 
+
   }
 
   // The next two methods are needed to start and stop polling data. While
@@ -269,58 +278,28 @@ export class Dapp extends React.Component {
   // While this action is specific to this application, it illustrates how to
   // send a transaction.
   async _transferTokens(to, amount) {
-    // Sending a transaction is a complex operation:
-    //   - The user can reject it
-    //   - It can fail before reaching the ethereum network (i.e. if the user
-    //     doesn't have ETH for paying for the tx's gas)
-    //   - It has to be mined, so it isn't immediately confirmed.
-    //     Note that some testing networks, like Hardhat Network, do mine
-    //     transactions immediately, but your dapp should be prepared for
-    //     other networks.
-    //   - It can fail once mined.
-    //
-    // This method handles all of those things, so keep reading to learn how to
-    // do it.
-
+    this._sendTransaction( this._leader, "transfer", [to, amount], this._updateBalance);
+  }
+  // Here is a generic try/catch function to handle errors 
+  // that takes an array of inputs, a contract and a function name
+  // and calls a chosen state to update
+  async _sendTransaction(contract, functionName, inputs, updateMethod) {
     try {
-      // If a transaction fails, we save that error in the component's state.
-      // We only save one such error, so before sending a second transaction, we
-      // clear it.
       this._dismissTransactionError();
-
-      // We send the transaction, and save its hash in the Dapp's state. This
-      // way we can indicate that we are waiting for it to be mined.
-      const tx = await this._leader.transfer(to, amount);
+      const tx = await contract[functionName](...inputs);
       this.setState({ txBeingSent: tx.hash });
-
-      // We use .wait() to wait for the transaction to be mined. This method
-      // returns the transaction's receipt.
       const receipt = await tx.wait();
-
-      // The receipt, contains a status flag, which is 0 to indicate an error.
       if (receipt.status === 0) {
-        // We can't know the exact error that made the transaction fail when it
-        // was mined, so we throw this generic one.
         throw new Error("Transaction failed");
       }
-
-      // If we got here, the transaction was successful, so you may want to
-      // update your state. Here, we update the user's balance.
-      await this._updateBalance();
+      await updateMethod;
     } catch (error) {
-      // We check the error code to see if this error was produced because the
-      // user rejected a tx. If that's the case, we do nothing.
       if (error.code === ERROR_CODE_TX_REJECTED_BY_USER) {
         return;
       }
-
-      // Other errors are logged and stored in the Dapp's state. This is used to
-      // show them to the user, and for debugging.
       console.error(error);
       this.setState({ transactionError: error });
     } finally {
-      // If we leave the try/catch, we aren't sending a tx anymore, so we clear
-      // this part of the state.
       this.setState({ txBeingSent: undefined });
     }
   }
@@ -362,4 +341,11 @@ export class Dapp extends React.Component {
 
     return false;
   }
+
+  // here is the function to accept joining a club from the voting contract
+
+  // All our club functions are below:
+
+    
+
 }
