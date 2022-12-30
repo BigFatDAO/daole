@@ -52,6 +52,12 @@ export class Dapp extends React.Component {
       networkError: undefined,
       // the subDAO address
       subDAOAddress: undefined,
+      // open votes
+      openVotes: undefined,
+      // effective balance
+      effectiveBalance: undefined,
+      // club members
+      clubMembers: undefined,
     };
 
     this.state = this.initialState;
@@ -141,8 +147,8 @@ export class Dapp extends React.Component {
             {this.state.subDAOAddress !== "0x0000000000000000000000000000000000000000" && (
               <MemberArea
                 subAddress={this.state.subDAOAddress}
-                transferTokens={(to, amount) => this._transferTokens(to, amount)}
-                tokenSymbol={this.state.tokenData.symbol}
+                openVotes={this.state.openVotes}
+                effectiveBalance={this.state.effectiveBalance}
               />)}
           </div>
         </div>
@@ -151,22 +157,12 @@ export class Dapp extends React.Component {
   }
 
   componentWillUnmount() {
-    // We poll the user's balance, so we have to stop doing that when Dapp
-    // gets unmounted
     this._stopPollingData();
   }
 
   async _connectWallet() {
-    // This method is run when the user clicks the Connect. It connects the
-    // dapp to the user's wallet, and initializes it.
-
-    // To connect to the user's wallet, we have to run this method.
-    // It returns a promise that will resolve to the user's address.
     const [selectedAddress] = await window.ethereum.request({ method: 'eth_requestAccounts' });
 
-    // Once we have the address, we can initialize the application.
-
-    // First we check the network
     if (!this._checkNetwork()) {
       return;
     }
@@ -230,6 +226,10 @@ export class Dapp extends React.Component {
         VotingArtifact.abi,
         this._provider.getSigner(0)
       );
+
+      await this._getOpenVotes();
+      await this._getEffectiveBalance();
+      await this._getNumberOfMembers();
     }
 
     // 
@@ -274,12 +274,41 @@ export class Dapp extends React.Component {
     this.setState({ balance });
   }
 
-  // This method sends an ethereum transaction to transfer tokens.
-  // While this action is specific to this application, it illustrates how to
-  // send a transaction.
+  async _getOpenVotes() {
+    const openVotes = await this._voting.opens(this.state.subDAOAddress);
+    this.setState({ openVotes });
+  }
+
+  // get effective balance
+  async _getEffectiveBalance() {
+    const effectiveBalanceBigInt = await this._subDAO.effectiveBalance();
+    const effectiveBalance = ethers.utils.formatEther(effectiveBalanceBigInt);
+    this.setState({ effectiveBalance });
+  }
+
+  //transfer tokens
   async _transferTokens(to, amount) {
     this._sendTransaction( this._leader, "transfer", [to, amount], this._updateBalance);
   }
+
+  //get number of members
+  async _getNumberOfMembers() {
+    const numberOfMembers = await this._subDAO.numberOfMembers();
+    this.setState({ numberOfMembers });
+  }
+
+  async _getMembers() {
+    const members = await this._subDAO.getMembers();
+    this.setState({ members });
+  }
+
+  
+
+  //suggest a member
+  async _suggestMember(memberAddress, grant) {
+    this._sendTransaction( this._subDAO, "createVote", [memberAddress, grant], this._getOpenVotes);
+  }
+
   // Here is a generic try/catch function to handle errors 
   // that takes an array of inputs, a contract and a function name
   // and calls a chosen state to update

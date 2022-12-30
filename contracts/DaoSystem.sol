@@ -128,16 +128,16 @@ contract Voting {
 contract SubDAO {
     bool locked;
     uint8 public numberOfMembers;
-    uint public effectiveBalance;
+    uint256 public effectiveBalance;
     address[] public members;
     
     Leader leader;
     mapping(uint256 => bool) paid;
     struct subMember {
         int8 active;
-        uint grantAmount;
-        uint nextSuggestion;
-        uint releaseTime;
+        uint256 grantAmount;
+        uint256 nextSuggestion;
+        uint256 releaseTime;
     }
     mapping(address => subMember) public subMembers;
     Voting voting;
@@ -268,6 +268,10 @@ contract SubDAO {
     function addBalance (uint _payment) public {
         require(msg.sender == address(leader) || msg.sender == address(voting));
         effectiveBalance += _payment;
+    }
+
+    function getMembers () public view returns (address[] memory) {
+        return members;
     }
 
 }
