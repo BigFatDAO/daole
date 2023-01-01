@@ -4,13 +4,12 @@ import { ethers } from "ethers";
 // import leader, voting, club and whitelist artifacts
 import LeaderArtifact from "../contracts/Leader.json";
 import VotingArtifact from "../contracts/Voting.json";
-import WhiteListArtifact from "../contracts/WhiteList.json";
+// import WhiteListArtifact from "../contracts/WhiteList.json";
 import SubDAOArtifact from "../contracts/SubDAO.json";
 
 import { NoWalletDetected } from "./NoWalletDetected";
 import { ConnectWallet } from "./ConnectWallet";
 import { Loading } from "./Loading";
-import { Transfer } from "./Transfer";
 import { TransactionErrorMessage } from "./TransactionErrorMessage";
 import { WaitingForTransactionMessage } from "./WaitingForTransactionMessage";
 import { NonMemberMessage } from "./NonMemberMessage";
@@ -18,11 +17,11 @@ import { MemberArea } from "./MemberArea";
 
 // get the contract addresses from the json files
 import LeaderAddress from "../contracts/Leader-address.json";
-import WhiteListAddress from "../contracts/WhiteList-address.json";
+// import WhiteListAddress from "../contracts/WhiteList-address.json";
 import VotingAddress from "../contracts/Voting-address.json";
 
 const leaderAddress = LeaderAddress.Address;
-const whiteListAddress = WhiteListAddress.Address;
+// const whiteListAddress = WhiteListAddress.Address;
 const votingAddress = VotingAddress.Address;
 
 
