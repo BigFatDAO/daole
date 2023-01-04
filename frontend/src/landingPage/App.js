@@ -14,7 +14,7 @@ export class LandingPage extends Component {
                     {/* add two buttons */}
                     <div className="app-buttons">
                         <button className="app-button">Documentation</button>
-                        <button className="app-button">Whitepaper</button>
+                        <button className="app-button">GitHub</button>
                     </div>
                 </section>
                 <section className="app-body">
