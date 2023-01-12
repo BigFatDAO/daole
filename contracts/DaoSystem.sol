@@ -44,10 +44,13 @@ contract Voting {
 /// @param _grantAmount Grant size for the new candidate
 /// @param _suggestedBy The member that suggested this candidate
 
-    function createVote(address _candidate, uint _grantAmount, address _suggestedBy, uint _numberOfMembers, uint _effectiveBalance) public onlySubs {
+// Make some changes here. Don't have a max number of open candidates.
+// Make min grant 5% of balance - if they don't have the effective balance 
+// then it'll say "too many grants"
+
+    function createVote(address _candidate, uint _grantAmount, address _suggestedBy, uint _effectiveBalance) public onlySubs {
         require(_effectiveBalance*5/100<_grantAmount,"too small");
-        require(openCandidates[msg.sender].length<_numberOfMembers, "close some votes");
-        require(_grantAmount <= _effectiveBalance/(_numberOfMembers - openCandidates[msg.sender].length),"too big");
+        require(_grantAmount <= _effectiveBalance,"too big");
         require(_candidate != address(leader), "no leader");
         require(!leader.isSubDAO(_candidate),"no subs");
         require(leader.subOfMember(_candidate)==address(0),"is member");
@@ -90,6 +93,7 @@ contract Voting {
         require(block.timestamp > candidates[_candidate].creationTime+2 weeks, "too soon bro");
         require(candidates[_candidate].open == true, "not open");
         require(candidates[_candidate].accepted == true, "has not accepted");
+
         candidates[_candidate].open = false;
 
         for (uint i = 0; i < openCandidates[msg.sender].length; i++) {
@@ -134,7 +138,7 @@ contract SubDAO {
     Leader leader;
     mapping(uint256 => bool) paid;
     struct subMember {
-        int8 active;
+        uint256 active;
         uint256 grantAmount;
         uint256 nextSuggestion;
         uint256 releaseTime;
@@ -158,7 +162,7 @@ contract SubDAO {
         voting = Voting(_voting);
         members.push(_member);
         numberOfMembers = 1;
-        subMembers[_member].active = 9;
+        subMembers[_member].active = 1;
         subMembers[_member].grantAmount = _grantAmount;
         subMembers[_member].releaseTime = block.timestamp + (26 weeks);
     }
@@ -178,7 +182,7 @@ contract SubDAO {
 /// @param _grantAmount Grant size for the new candidate
     function createVote(address _candidate, uint _grantAmount) public onlyMembers {
         require(block.timestamp>subMembers[msg.sender].nextSuggestion,"wait");
-        voting.createVote(_candidate, _grantAmount, msg.sender, numberOfMembers, effectiveBalance);
+        voting.createVote(_candidate, _grantAmount, msg.sender, effectiveBalance);
         vote(_candidate, 1);
         effectiveBalance -= _grantAmount;
         subMembers[msg.sender].nextSuggestion = block.timestamp + 2 weeks;
@@ -188,34 +192,15 @@ contract SubDAO {
 /// @param _candidate The suggested candidate to be voted on
 /// @param _vote the vote, +1 or -1
     function vote (address _candidate, int8 _vote) public onlyMembers {
-        if(subMembers[msg.sender].active < 21){
-            subMembers[msg.sender].active += 3;
-        }
 
         voting.vote(_candidate, msg.sender, _vote);
     }
 
 
-/// @notice Closes the vote and adds/closes the candidate, removes inactive members
+/// @notice Closes the vote and adds/closes the candidate
 /// @param _candidate The suggested candidate
     function finishVote(address _candidate) public onlyMembers {
-        for (uint i = 0; i < members.length; i++) {
-            subMembers[address(members[i])].active -= 2;
-            
-            if(subMembers[address(members[i])].active<1) {
-                delete members[i];
 
-                for (uint j = i; j<members.length-1; j++){
-                    members[j] = members[j+1];
-                }
-                members.pop();
-
-                numberOfMembers -=1;
-
-                emit MemberRemoved(address(members[i]), block.timestamp);
-            }
-        }
-        
         voting.finishVote(_candidate);
     }
 
@@ -227,7 +212,7 @@ contract SubDAO {
             if(members.length<7){
                 members.push(_candidate);
                 numberOfMembers += 1;
-                subMembers[_candidate].active = 9;
+                subMembers[_candidate].active = 1;
                 subMembers[_candidate].grantAmount = _grant;
                 subMembers[_candidate].releaseTime = block.timestamp+(26 weeks);
                 leader.addToAllMembers(_candidate, _grant, address(this),address(this));
@@ -237,30 +222,21 @@ contract SubDAO {
             }         
         }
 
-/// @notice Calls the Leader contract to pay this sub, then pays members
+/// @notice Calls the Leader contract to pay this sub
     function payMembers() public onlyMembers {
         uint256 month = block.timestamp/(4 weeks);
         require(!paid[month],"paid");
         paid[month]=true;
-
         leader.paySubs();
-
-        for (uint i = 0; i < members.length; i++){
-            leader.transfer(address(members[i]), effectiveBalance/100);
-        }
-
-        effectiveBalance -= members.length * effectiveBalance/100;
     }
 
 /// @notice Withdraws the grant for the caller, if they are a member
     function withdrawGrant() public {
-        require(!locked);
-        locked = true;
         require(block.timestamp > subMembers[msg.sender].releaseTime, "locked");
         require(subMembers[msg.sender].grantAmount > 0, "no grant");
-        leader.transfer(msg.sender, subMembers[msg.sender].grantAmount);
+        uint grant = subMembers[msg.sender].grantAmount;
         subMembers[msg.sender].grantAmount = 0;
-        locked = false;
+        leader.transfer(msg.sender, grant);
     }
 
 /// @notice Called by leader or voting contract to add to effectiveBalance
@@ -394,7 +370,6 @@ contract Leader is Daole {
 
         _mint(msg.sender, payment);
         SubDAO(msg.sender).addBalance(payment);
-
     }
 
 /// @notice Called by subs or subFactory to add members to the leader mappings

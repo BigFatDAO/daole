@@ -2,7 +2,7 @@
 const { expect, assert } = require("chai");
 const chai = require('chai');
 const chaiAlmost = require('chai-almost');
-const { BigNumber } = require("ethers");
+const { BigNumber, logger } = require("ethers");
 chai.use(chaiAlmost(100));
 const { ethers } = require("hardhat");
 const twoWeeks = 60*60*24*14
@@ -134,40 +134,44 @@ describe('Basic Set up', function () {
 
         subBal = BigInt(subMint)*BigInt(1e18)
         grant = calculateGrant(totalSupply)/noSubs
-        payment = (subBal + grant)/BigInt(100);
-        burn = payment/BigInt(100);
-        subBal += grant-payment;
-        adamBal = payment-burn;
-
-        totalSupply += grant - burn
+        subBal += grant
+        
+        totalSupply += grant
 
         expect(await SubAdam.effectiveBalance()).to.equal(subBal);
-        expect(await leader.balanceOf(adam.address)).to.equal(adamBal);
 
-        await addPerformance(adam.address, payment)
     })
 
     it("pays Eve", async function () {
         await SubEve.connect(eve).payMembers()
         expect(await SubEve.effectiveBalance()).to.equal(subBal);
-        expect(await leader.balanceOf(eve.address)).to.equal(payment-burn)
-        await addPerformance(eve.address, payment)
-        totalSupply += grant - burn
+
+        totalSupply += grant
     })
 
     it("pays moses", async function () {
         await SubMoses.connect(moses).payMembers()
         expect(await SubMoses.effectiveBalance()).to.equal(subBal);
-        expect(await leader.balanceOf(moses.address)).to.equal(payment-burn)
-        await addPerformance(moses.address, payment)
-        totalSupply += grant - burn
+
+        totalSupply += grant
     })
 
     it("rejects payment", async function () {
         await expect(SubAdam.connect(adam).payMembers()).to.be.revertedWith('paid')    
     })
 
+    it("check totalSupply", async function () {
+        expect(await leader.totalSupply()).to.equal(totalSupply);
+    });
+
     it("accepts after t", async function () {
+        //transfer a bit to adam
+        await transfer(adam.address, 1e10)
+
+        //burn 1% of transfers
+        totalSupply -= BigInt(1e10)/BigInt(100)
+        expect(await leader.totalSupply()).to.equal(totalSupply)
+
         await network.provider.send("evm_increaseTime", [oneMonth]);
         await network.provider.send("evm_mine");
 
@@ -178,29 +182,20 @@ describe('Basic Set up', function () {
         await SubAdam.connect(adam).payMembers()
         
         subBal += grant;
-
-        payment = subBal/BigInt(100);
-        subBal -= payment
-        burn = payment/BigInt(100);
-
-        adamBal += (payment*BigInt(99)/BigInt(100))
         
         expect(await SubAdam.effectiveBalance()).to.equal(subBal)
-        expect(await leader.balanceOf(adam.address)).to.equal(adamBal)
     })
 
     it("rejects vote creation", async function () {
         await expect(SubAdam.connect(adam).createVote(cuervo.address, ethers.utils.parseEther("533249752.375"))).to.be.revertedWith("too big")
         await expect(SubAdam.connect(adam).createVote(cuervo.address, ethers.utils.parseEther("249752.375"))).to.be.revertedWith("too small")
-        await expect(SubAdam.connect(adam).createVote(eve.address, ethers.utils.parseEther("5332492.375"))).to.be.revertedWith("is member")
+        await expect(SubAdam.connect(adam).createVote(eve.address, ethers.utils.parseEther("9332492.375"))).to.be.revertedWith("is member")
     })
 
     it("creates a vote", async function () {
         const grantSize = subBal/BigInt(4);
         await SubAdam.connect(adam).createVote(jose.address, grantSize)
-        active = {
-            "adam": 12
-        }
+
         subBal -= grantSize;
         const candidate1 = await voting.opens(SubAdam.address);
         expect(candidate1[0]).to.equal(jose.address);
@@ -215,7 +210,7 @@ describe('Basic Set up', function () {
     })
 
     it("rejects early close", async function () {
-        await expect(SubAdam.connect(adam).finishVote(jose.address)).to.be.revertedWith("too soon");
+        await expect(SubAdam.connect(adam).finishVote(jose.address)).to.be.revertedWith("too soon bro");
     })
 
     it("rejects unaccepted close", async function () {
@@ -229,38 +224,22 @@ describe('Basic Set up', function () {
     })
 
     it("closes vote and adds jose", async function () {
-        let AA = await SubAdam.subMembers(adam.address)
-        expect(AA.active).to.equal(active.adam)
         await voting.connect(jose).accept()
         await SubAdam.connect(adam).finishVote(jose.address);
-        active.jose = 9
         expect(await SubAdam.effectiveBalance()).to.equal(subBal)
         expect(await SubAdam.connect(adam).members(1)).to.equal(jose.address);
         expect(await leader.subOfMember(jose.address)).to.equal(SubAdam.address);
-        active.adam -= 2
-        AA = await SubAdam.subMembers(adam.address)
-        expect(AA.active).to.equal(active.adam)
-
     })
 
-    it("pays the two people", async function () {
-        const monthGrant = calculateGrant(totalSupply)/BigInt(2)
+    it("pays adam", async function () {
+        const monthGrant = calculateGrant(totalSupply)
         expect(await SubAdam.effectiveBalance()).to.equal(subBal);
 
-        subBal += monthGrant
-        
-        payment = subBal/BigInt(100)
-        burn = payment/BigInt(100)
-
-        adamBal += payment-burn
-        joseBal = payment-burn
-        subBal -= (payment+payment)
+        subBal += monthGrant/BigInt(5);
 
         await SubAdam.connect(adam).payMembers()
 
         expect((await SubAdam.effectiveBalance())/10e10).to.almost.equal(Number(subBal/BigInt(10e10)));
-        expect((await leader.balanceOf(jose.address))/10e10).to.almost.equal(Number(joseBal/BigInt(10e10)))
-        expect((await leader.balanceOf(adam.address))/10e10).to.almost.equal(Number(adamBal/BigInt(10e10)))
     })
 
     //cuervo, mrT, lilTimmy, bigDog
@@ -270,20 +249,16 @@ describe('Basic Set up', function () {
         const candidate1 = await voting.opens(SubAdam.address);
         expect(candidate1[0]).to.equal(cuervo.address);
         subBal = BigInt(await SubAdam.effectiveBalance())
-        active.adam += 3
     })
 
     it("jose votes for cuervo, then tries a double", async function () {
         await SubAdam.connect(jose).vote(cuervo.address, 1)
         await expect(SubAdam.connect(jose).vote(cuervo.address, 1)).to.be.revertedWith("voted");
-        active.jose += 3
         await network.provider.send("evm_increaseTime", [twoWeeks]);
         await network.provider.send("evm_mine");
         await voting.connect(cuervo).accept();
         await SubAdam.connect(jose).finishVote(cuervo.address);
-        active.cuervo = 9
-        active.adam -= 2
-        active.jose -= 2
+
         expect(await SubAdam.numberOfMembers()).to.equal(3)
         expect(await SubAdam.connect(adam).members(2)).to.equal(cuervo.address);
     })
@@ -293,7 +268,7 @@ describe('Basic Set up', function () {
     it("creates a vote for Mr T", async function () {
         addGrants = BigInt((await SubAdam.effectiveBalance())/8)
         await SubAdam.connect(jose).createVote(mrT.address, addGrants)
-        active.jose += 1
+
         subBal -= addGrants
         expect(await SubAdam.effectiveBalance()).to.equal(subBal)
         const candidate1 = await voting.opens(SubAdam.address);
@@ -305,8 +280,6 @@ describe('Basic Set up', function () {
         await expect(SubAdam.connect(adam).vote(mrT.address, -2)).to.be.revertedWith("vote not right")
         await SubAdam.connect(adam).vote(mrT.address, -1)
         await SubAdam.connect(cuervo).vote(mrT.address, -1)
-        active.adam += 3
-        active.cuervo += 3
     })
 
     it("closes vote and rejects mr T", async function () {
@@ -314,8 +287,6 @@ describe('Basic Set up', function () {
         await network.provider.send("evm_mine");
         await voting.connect(mrT).accept();
         await SubAdam.connect(adam).finishVote(mrT.address);
-        active.adam -= 2
-        active.cuervo -= 2 
         expect(await SubAdam.connect(adam).numberOfMembers()).to.equal(3);
         subBal += addGrants
         expect(await SubAdam.effectiveBalance()).to.equal(subBal)
@@ -324,47 +295,27 @@ describe('Basic Set up', function () {
     it("adds lilTimmy, big dog and the new guys", async function () {
         await SubAdam.connect(jose).createVote(bigDog.address, addGrants)
         subBal -= addGrants
-        active.jose += 3
         await SubAdam.connect(cuervo).vote(bigDog.address, 1)
-        active.cuervo += 3
         await SubAdam.connect(adam).createVote(lilTimmy.address, addGrants)
-        active.adam += 3
         subBal -= addGrants
         await network.provider.send("evm_increaseTime", [twoWeeks]);
         await network.provider.send("evm_mine");
         await voting.connect(bigDog).accept();
         await SubAdam.connect(adam).finishVote(bigDog.address);
-        active.adam -= 2
-        active.jose -= 2
-        active.cuervo -= 2
         await voting.connect(lilTimmy).accept();
         await SubAdam.connect(adam).finishVote(lilTimmy.address);
-        active.adam -= 2
-        active.jose -= 2
-        active.cuervo -= 2
-        active.bigDog = 7
 
         await SubAdam.connect(jose).createVote(newGuy.address, addGrants)
         subBal -= addGrants
-        active.jose +=3
         await SubAdam.connect(cuervo).createVote(newGuy2.address, addGrants)
         subBal -= addGrants
-        active.cuervo +=3
         //
         await network.provider.send("evm_increaseTime", [twoWeeks]);
         await network.provider.send("evm_mine");
         await voting.connect(newGuy).accept();
         await SubAdam.connect(adam).finishVote(newGuy.address);
-        active.adam -= 2
-        active.jose -= 2
-        active.cuervo -= 2
-        active.bigDog -= 2
         await voting.connect(newGuy2).accept();
         await SubAdam.connect(adam).finishVote(newGuy2.address);
-        active.adam -= 2
-        active.jose -= 2
-        active.cuervo -= 2
-        active.bigDog -= 2
         expect(await Perf.totalSubs()).to.equal(5);
         expect(await SubAdam.connect(adam).numberOfMembers()).to.equal(7);
         await expect(SubAdam.connect(bigDog).withdrawGrant()).to.be.revertedWith('locked')
@@ -375,15 +326,10 @@ describe('Basic Set up', function () {
         const subsBefore = Number(await Perf.totalSubs());
         await SubAdam.connect(jose).createVote(uncleG.address, addGrants)
         subBal -= addGrants
-        if(active.jose<21){active.jose+=3}
         await network.provider.send("evm_increaseTime", [twoWeeks]);
         await network.provider.send("evm_mine");
         await voting.connect(uncleG).accept();
         await SubAdam.connect(adam).finishVote(uncleG.address);
-        active.adam -= 2
-        active.jose -= 2
-        active.cuervo -= 2
-        active.bigDog -= 2
         const subsAfter = subsBefore+1;
         expect(await Perf.totalSubs()).to.equal(subsAfter);
         expect(await Perf.totalSubs()).to.equal(6);
@@ -430,12 +376,10 @@ describe('Basic Set up', function () {
 
         //SubU and uncleG balance
         grant = await getGrant(uncleG.address)
-        payment = grant/BigInt(100)
-        burn = payment/BigInt(100)
 
-        expect(await SubU.effectiveBalance()).to.equal(grant-payment)
+        expect(await SubU.effectiveBalance()).to.equal(grant)
 
-        var expUncBal1 = balanceAmount + payment - burn;
+        var expUncBal1 = balanceAmount
         var uncBal1 = await leader.balanceOf(uncleG.address)
         
         var expUncBal = Number(expUncBal1);
@@ -450,68 +394,18 @@ describe('Basic Set up', function () {
         grant = await getGrant(adam.address)
 
         subBal += grant
-        payment = subBal/BigInt(100)
-        burn = payment/BigInt(100)
-        subBal -= BigInt(7)*payment
+
         subNum = Number(subBal/BigInt(10e10))
        
         expect((await SubAdam.effectiveBalance())/10e10).to.almost.equal(subNum)
 
-        expect((await leader.balanceOf(lilTimmy.address))/10e10).to.almost.equal(Number((balanceAmount + payment - burn)/BigInt(10e10)))
+        expect((await leader.balanceOf(lilTimmy.address))/10e10).to.almost.equal(Number((balanceAmount)/BigInt(10e10)))
     })
 
-    it("check becoming inactive", async function (){
-        const cuervoActive = await SubAdam.subMembers(cuervo.address)
-        expect(cuervoActive.active).to.equal(active.cuervo)
-
-        const adamA = await SubAdam.subMembers(adam.address)
-        expect(active.adam).to.equal(adamA.active)
-
-        const joseA = await SubAdam.subMembers(jose.address)
-        expect(active.jose).to.equal(joseA.active)
-
-        bigDogA = await SubAdam.subMembers(bigDog.address)
-        expect(active.bigDog).to.equal(bigDogA.active)
-        
-        newTransfer = subBal/BigInt(10);
-        await SubAdam.connect(adam).createVote(dummy.address, newTransfer);
-        await SubAdam.connect(jose).vote(dummy.address, -1)
-        await SubAdam.connect(cuervo).vote(dummy.address, -1)
-        await SubAdam.connect(lilTimmy).vote(dummy.address, -1)
-        await network.provider.send("evm_increaseTime", [twoWeeks]);
-        await network.provider.send("evm_mine");
-        await voting.connect(dummy).accept();
-        await SubAdam.connect(adam).finishVote(dummy.address);
-        await SubAdam.connect(adam).createVote(dummy2.address, newTransfer);
-        await SubAdam.connect(jose).vote(dummy2.address, -1)
-        await SubAdam.connect(cuervo).vote(dummy2.address, -1)
-        await SubAdam.connect(lilTimmy).vote(dummy2.address, -1)
-        await SubAdam.connect(newGuy).vote(dummy2.address, -1)
-
-        await network.provider.send("evm_increaseTime", [twoWeeks]);
-        await network.provider.send("evm_mine");
-        await voting.connect(dummy2).accept();
-        await SubAdam.connect(adam).finishVote(dummy2.address);
-        await SubAdam.connect(adam).createVote(dummy3.address, newTransfer);
-        
-        await voting.connect(dummy3).accept();
-        await SubAdam.connect(jose).vote(dummy3.address, 1)
-        await SubAdam.connect(cuervo).vote(dummy3.address, 1)
-        await SubAdam.connect(lilTimmy).vote(dummy3.address, 1)
-
-        await network.provider.send("evm_increaseTime", [twoWeeks]);
-        await network.provider.send("evm_mine");
-
-        await SubAdam.connect(adam).finishVote(dummy3.address);
-        expect(await SubAdam.members(6)).to.equal(dummy3.address)
-        expect(await SubAdam.numberOfMembers()).to.equal(7)
-        await expect(SubAdam.connect(bigDog).createVote(dummy2.address,newTransfer)).to.be.revertedWith("not active member")
-
-    })
-
-    it("big dog can still withdraw", async function () {
+    it("big dog can withdraw", async function () {
         subBal = BigInt(await SubAdam.effectiveBalance())
         bigDogBal = BigInt(await leader.balanceOf(bigDog.address))
+        bigDogA = await SubAdam.subMembers(bigDog.address)
         bdGrant = BigInt(bigDogA.grantAmount)
         bdBurn = bdGrant/BigInt(100)
         await network.provider.send("evm_increaseTime", [sixMonths]);
@@ -528,6 +422,7 @@ describe('Basic Set up', function () {
     })
 
     it("rejects adding leader, sub", async function () {
+        const newTransfer = subBal/BigInt(10)
         await expect(SubAdam.connect(adam).createVote(SubU.address, newTransfer)).to.be.revertedWith("no subs")
         await expect(SubAdam.connect(adam).createVote(leader.address, newTransfer)).to.be.revertedWith("no leader")
     })
@@ -604,8 +499,6 @@ describe("small grants", function () {
         const dummy2Bal = BigInt(await leader.balanceOf(dummy2.address))
         const transfer3 = BigInt(1e18)
         burn = transfer3/BigInt(100)
-        const subBal = BigInt(await SubAdam.effectiveBalance())
-        const subUBal = BigInt(await SubU.effectiveBalance())
         await transfer(jose.address, transfer3)
         await transfer(dummy2.address, transfer3)
 
