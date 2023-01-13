@@ -15,6 +15,13 @@ async function main() {
   console.log("WhiteList deployed to:", whiteList.address);
   //save to the frontend
   saveFrontendFiles("WhiteList", whiteList);
+  //get gas used
+  const whiteListGasUsed = await whiteList.deployTransaction.wait();
+  console.log("WhiteList gas used:", whiteListGasUsed.gasUsed.toString());
+
+  //get deployed contract size
+  const whiteListContractSize = await hre.ethers.provider.getCode(whiteList.address);
+  console.log("WhiteList contract size:", whiteListContractSize.length);
 
   //add members to WhiteList
   await whiteList.addToWhiteList(member1.address);
@@ -34,6 +41,12 @@ async function main() {
   console.log("Leader deployed to:", leader.address);
   //save to the frontend
   saveFrontendFiles("Leader", leader);
+  //get the deployed contract size
+  const leaderBytecode = await hre.ethers.provider.getCode(leader.address);
+  console.log("Leader contract size:", leaderBytecode.length);
+  //get gas used for deployment
+  const leaderGasUsed = await leader.deployTransaction.gasLimit;
+  console.log("Leader gas used:", leaderGasUsed.toString());
 
   //get sub factory address and deploy sub factory
   const subFactoryAddress = await leader.subFactoryAddress();

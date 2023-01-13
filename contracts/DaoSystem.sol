@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0
 
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.9;
 
 import './DAOLE.sol';
 /// @title Eth Club 7
@@ -44,16 +44,12 @@ contract Voting {
 /// @param _grantAmount Grant size for the new candidate
 /// @param _suggestedBy The member that suggested this candidate
 
-// Make some changes here. Don't have a max number of open candidates.
-// Make min grant 5% of balance - if they don't have the effective balance 
-// then it'll say "too many grants"
-
     function createVote(address _candidate, uint _grantAmount, address _suggestedBy, uint _effectiveBalance) public onlySubs {
-        require(_effectiveBalance*5/100<_grantAmount,"too small");
         require(_grantAmount <= _effectiveBalance,"too big");
         require(_candidate != address(leader), "no leader");
         require(!leader.isSubDAO(_candidate),"no subs");
         require(leader.subOfMember(_candidate)==address(0),"is member");
+        require(!candidates[_candidate].open, "already suggested");
         candidates[_candidate].open = true;
         candidates[_candidate].accepted = false;
         candidates[_candidate].creationTime = block.timestamp;
@@ -78,9 +74,9 @@ contract Voting {
 /// @param _voter the member voting
 /// @param _vote the vote, +1 or -1
     function vote(address _candidate, address _voter, int8 _vote) public onlySubs {
-        require(candidates[_candidate].vote[_voter]==false,"voted");
+        require(!candidates[_candidate].vote[_voter],"voted");
         require(_vote == 1 || _vote == -1, "vote not right");
-        require(candidates[_candidate].open = true, "not open");
+        require(candidates[_candidate].open, "not open");
         candidates[_candidate].votes += _vote;
         candidates[_candidate].vote[_voter]=true;
 
@@ -92,7 +88,6 @@ contract Voting {
     function finishVote(address _candidate) public onlySubs {
         require(block.timestamp > candidates[_candidate].creationTime+2 weeks, "too soon bro");
         require(candidates[_candidate].open == true, "not open");
-        require(candidates[_candidate].accepted == true, "has not accepted");
 
         candidates[_candidate].open = false;
 
@@ -109,6 +104,7 @@ contract Voting {
         }
 
         if(candidates[_candidate].votes>=1){
+            require(candidates[_candidate].accepted == true, "has not accepted");
             emit VoteCompleted(_candidate, true, block.timestamp);
             SubDAO(candidates[_candidate].subDAO).passVote(_candidate, candidates[_candidate].grantAmount);
         } else {
@@ -215,7 +211,7 @@ contract SubDAO {
                 subMembers[_candidate].active = 1;
                 subMembers[_candidate].grantAmount = _grant;
                 subMembers[_candidate].releaseTime = block.timestamp+(26 weeks);
-                leader.addToAllMembers(_candidate, _grant, address(this),address(this));
+                leader.addToAllMembers(_candidate, address(this),address(this));
                 emit MemberAdded(_candidate, address(this), _grant, block.timestamp);
             } else { 
                 leader.createSubDAO(_candidate, _grant, address(this));
@@ -290,7 +286,6 @@ contract Leader is Daole {
     mapping (address => bool) subs;
 
     struct memberDeets {
-        uint grantAmount;
         address addedBy;
         address subDAO;
     }
@@ -300,7 +295,7 @@ contract Leader is Daole {
 
 /// @notice Creates subFactory and Voting contracts
 /// @param _whiteList The whitelist contract address
-    constructor(address _whiteList) Daole(5e27, 10e27) {
+    constructor(address _whiteList) Daole() {
         Voting voting = new Voting(address(this));
         votingAddress = address(voting);
         SubFactory subFactory = new SubFactory(address(this),_whiteList);
@@ -334,7 +329,7 @@ contract Leader is Daole {
         subs[_subDAO] = true;
         _mint(_subDAO, _grantAmount);
         Performance(performance).addSub();
-        addToAllMembers(_member1, _grantAmount, _addedBy, _subDAO);
+        addToAllMembers(_member1, _addedBy, _subDAO);
 //        emit SubDAOCreated(_owner, _addedBy, _grantAmount, block.timestamp);
     }
 
@@ -346,12 +341,12 @@ contract Leader is Daole {
             SubDAO(_to).addBalance(_amount);
         } 
         //If reciever is a member, add volume to performance
-        if(members[_to].grantAmount>0){
+        if(members[_to].subDAO != address(0)){
 
             _transfer(msg.sender, _to, _amount*99/100);
             _burn(msg.sender, _amount/100);
 
-            Performance(performance).addPerformance(_amount, members[_to].addedBy, members[_to].subDAO, members[_to].grantAmount );
+            Performance(performance).addPerformance(_amount, members[_to].addedBy, members[_to].subDAO);
         } else {
             _transfer(msg.sender, _to, _amount);
         }
@@ -363,7 +358,7 @@ contract Leader is Daole {
         uint month = block.timestamp/(4 weeks);
 
         if(totalGrants[month]==0){
-            totalGrants[month] = (maxSupply - totalSupply())*9/200;
+            totalGrants[month] = (MAX_SUPPLY - totalSupply())*9/200;
         }
 
         uint payment = Performance(performance).getPayment(totalGrants[month], msg.sender);
@@ -374,22 +369,18 @@ contract Leader is Daole {
 
 /// @notice Called by subs or subFactory to add members to the leader mappings
 /// @param _memberAddress Member to be added
-/// @param _grantAmount Grant size
 /// @param _addedBy The sub that added the member
 /// @param _subDAO The sub of the member
     function addToAllMembers(
         address _memberAddress, 
-        uint _grantAmount, 
         address _addedBy, 
         address _subDAO 
     ) 
         public 
     {
         require(subs[msg.sender]||msg.sender==subFactoryAddress);
-        members[_memberAddress].grantAmount = _grantAmount;
         members[_memberAddress].addedBy = _addedBy;
         members[_memberAddress].subDAO = _subDAO;
-        Performance(performance).addGrant(_grantAmount);
     }
 
 /// @notice Returns the sub of an address
@@ -397,13 +388,6 @@ contract Leader is Daole {
 /// @return The sub of the member - returns zero address if not a member
     function subOfMember(address _member) public view returns (address) {
         return members[_member].subDAO;
-    }
-
-/// @notice Returns the grant of a member
-/// @param _member The member
-/// @return The grant of the member - returns zero if not a member
-    function grantSize(address _member) public view returns (uint) {
-        return members[_member].grantAmount;
     }
 
 /// @notice Returns the sub that added a member
@@ -461,9 +445,7 @@ contract WhiteList{
 
 contract Performance {
     uint initialMonth;
-    uint public totalGrants;
     uint public totalSubs;
-    uint public totalMembers;
     Leader leader;
     mapping(address => mapping(uint => uint)) public subPerformance;
     mapping(uint => uint) public totalPerformance;
@@ -478,23 +460,17 @@ contract Performance {
         _;
     }
 
-    function addGrant(uint _grantAmount) public onlyLeader {
-        totalGrants += _grantAmount;
-        totalMembers += 1;
-    }
-
     function addSub() public onlyLeader {
         totalSubs += 1;
     }
 
-    function addPerformance(uint _amount, address _addedBy, address _subDAO, uint _grantAmount) public onlyLeader {
+    function addPerformance(uint _amount, address _addedBy, address _subDAO) public onlyLeader {
         uint month = block.timestamp/(4 weeks);
-        uint effGrant = _grantAmount >= totalGrants/(totalSubs*10) ? _grantAmount : totalGrants/(totalSubs*10);
         
-        subPerformance[_addedBy][month+1] += (1e20*_amount*_amount)/(2*effGrant);
-        subPerformance[_subDAO][month+1] += (1e20*_amount*_amount)/(2*effGrant);
+        subPerformance[_addedBy][month+1] += (_amount/2);
+        subPerformance[_subDAO][month+1] += (_amount/2);
                 
-        totalPerformance[month+1] += (1e20*_amount*_amount)/effGrant;
+        totalPerformance[month+1] += (_amount);
     }
 
     function getPayment(uint _monthlyGrants, address _subDAO) public view returns (uint) {

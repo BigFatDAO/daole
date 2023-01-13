@@ -54,7 +54,7 @@ before(async function () {
     const votingAddress = await leader.votingAddress();
     voting = await hre.ethers.getContractAt("Voting", votingAddress);
 
-    maxS = await leader.maxSupply();
+    maxS = await leader.MAX_SUPPLY();
     maxSupply = BigInt(maxS)
 
     calculateGrant = function(totalSupply) {
@@ -73,7 +73,6 @@ before(async function () {
 //add performance to a specific sub
     addPerformance = async function(to, amount) {
         const sub = await leader.subOfMember(to);
-        const grantAmount = await leader.grantSize(to);
         const addedBy = await leader.getAddedBy(to);
 
         if(!(sub in performance)){
@@ -85,10 +84,10 @@ before(async function () {
         }
 
 
-        performance[sub] += BigInt(1e20)*BigInt(amount)*BigInt(amount)/(BigInt(2)*BigInt(grantAmount))
-        performance[addedBy] += BigInt(1e20)*BigInt(amount)*BigInt(amount)/(BigInt(2)*BigInt(grantAmount))        
+        performance[sub] += BigInt(amount)/BigInt(2)
+        performance[addedBy] += BigInt(amount)/BigInt(2)    
 
-        totalPerformance += BigInt(1e20)*BigInt(amount)*BigInt(amount)/BigInt(grantAmount)
+        totalPerformance += BigInt(amount)
     }
 //transfer function that adds performance
     transfer = async function(to, amount) {
@@ -166,10 +165,10 @@ describe('Basic Set up', function () {
 
     it("accepts after t", async function () {
         //transfer a bit to adam
-        await transfer(adam.address, 1e10)
+        await transfer(adam.address, BigInt(1.1e10))
 
         //burn 1% of transfers
-        totalSupply -= BigInt(1e10)/BigInt(100)
+        totalSupply -= BigInt(1.1e10)/BigInt(100)
         expect(await leader.totalSupply()).to.equal(totalSupply)
 
         await network.provider.send("evm_increaseTime", [oneMonth]);
@@ -188,7 +187,6 @@ describe('Basic Set up', function () {
 
     it("rejects vote creation", async function () {
         await expect(SubAdam.connect(adam).createVote(cuervo.address, ethers.utils.parseEther("533249752.375"))).to.be.revertedWith("too big")
-        await expect(SubAdam.connect(adam).createVote(cuervo.address, ethers.utils.parseEther("249752.375"))).to.be.revertedWith("too small")
         await expect(SubAdam.connect(adam).createVote(eve.address, ethers.utils.parseEther("9332492.375"))).to.be.revertedWith("is member")
     })
 
@@ -357,8 +355,6 @@ describe('Basic Set up', function () {
         
         // transfers to lilTimmy, Big Dog
         await transfer(lilTimmy.address, transferAmount)
-        subGrant = BigInt(await leader.grantSize(lilTimmy.address))
-
         expect(await leader.balanceOf(lilTimmy.address)).to.equal(balanceAmount)
         
         await transfer(bigDog.address, transferAmount)
@@ -509,7 +505,6 @@ describe("small grants", function () {
 
         await network.provider.send("evm_increaseTime", [oneMonth]);
         await network.provider.send("evm_mine");
-
 
         getPayment = await Perf.getPayment(totalGrants, SubAdam.address)
         console.log("payment subA: " + getPayment)
