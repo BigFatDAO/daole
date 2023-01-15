@@ -49,7 +49,7 @@ contract Voting {
         require(_candidate != address(leader), "no leader");
         require(!leader.isSubDAO(_candidate),"no subs");
         require(leader.subOfMember(_candidate)==address(0),"is member");
-        require(!candidates[_candidate].open, "already suggested");
+        require(!candidates[_candidate].open, "already been suggested");
         candidates[_candidate].open = true;
         candidates[_candidate].accepted = false;
         candidates[_candidate].creationTime = block.timestamp;
