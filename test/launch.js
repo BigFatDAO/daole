@@ -168,7 +168,7 @@ describe('Basic Set up', function () {
         await transfer(adam.address, BigInt(1.1e10))
 
         //burn 1% of transfers
-        totalSupply -= BigInt(1.1e10)/BigInt(100)
+        totalSupply -= BigInt(1.1e10)/BigInt(50)
         expect(await leader.totalSupply()).to.equal(totalSupply)
 
         await network.provider.send("evm_increaseTime", [oneMonth]);
@@ -349,7 +349,7 @@ describe('Basic Set up', function () {
     it("do some transactions then pay up", async function () {
         resetPerformance()
         const transferAmount = BigInt(90900879900)
-        const burnAmount = transferAmount/BigInt(100)
+        const burnAmount = transferAmount/BigInt(50)
         const balanceAmount = transferAmount-burnAmount
         await transfer(uncleG.address, transferAmount)
         
@@ -403,7 +403,7 @@ describe('Basic Set up', function () {
         bigDogBal = BigInt(await leader.balanceOf(bigDog.address))
         bigDogA = await SubAdam.subMembers(bigDog.address)
         bdGrant = BigInt(bigDogA.grantAmount)
-        bdBurn = bdGrant/BigInt(100)
+        bdBurn = bdGrant/BigInt(50)
         await network.provider.send("evm_increaseTime", [sixMonths]);
         await network.provider.send("evm_mine");
 
@@ -449,7 +449,7 @@ describe('test trasactions', function () {
         const eveBal = BigInt(await leader.balanceOf(eve.address))
 
         const trans = BigInt(5e15)
-        burn = trans/BigInt(100)
+        burn = trans/BigInt(50)
         await transfer(eve.address, trans)  
         expect(await leader.balanceOf(god.address)).to.equal(godBal-trans)
         expect(await leader.balanceOf(eve.address)).to.equal(eveBal+(trans - burn))
@@ -494,7 +494,7 @@ describe("small grants", function () {
         const joseBal = BigInt(await leader.balanceOf(jose.address))
         const dummy2Bal = BigInt(await leader.balanceOf(dummy2.address))
         const transfer3 = BigInt(1e18)
-        burn = transfer3/BigInt(100)
+        burn = transfer3/BigInt(50)
         await transfer(jose.address, transfer3)
         await transfer(dummy2.address, transfer3)
 

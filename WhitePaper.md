@@ -23,8 +23,9 @@ In the case where the newly added member becomes the first in a new Club, their 
 <h4>Tokenomics</h4>
 
 * Max Supply: 10B DAOLE
-* Liquidity Pool: 5B DAOLE (Released over 3 years) + Eth from Whitelist Auction
+* Liquidity Pool: 4B DAOLE (Released over 3 years) + Eth from Whitelist Auction 
 * Business Grants: 5B DAOLE
+* Developer Fund: 1B DAOLE
 
 <h3>Launch</h3>
 <h4>Auction and Whitelist</h4>

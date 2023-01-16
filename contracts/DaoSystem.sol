@@ -50,6 +50,7 @@ contract Voting {
         require(!leader.isSubDAO(_candidate),"no subs");
         require(leader.subOfMember(_candidate)==address(0),"is member");
         require(!candidates[_candidate].open, "already been suggested");
+        // some of these values need to be set to 0 or false because they may have already been a candidate
         candidates[_candidate].open = true;
         candidates[_candidate].accepted = false;
         candidates[_candidate].creationTime = block.timestamp;
@@ -188,7 +189,6 @@ contract SubDAO {
 /// @param _candidate The suggested candidate to be voted on
 /// @param _vote the vote, +1 or -1
     function vote (address _candidate, int8 _vote) public onlyMembers {
-
         voting.vote(_candidate, msg.sender, _vote);
     }
 
@@ -196,7 +196,6 @@ contract SubDAO {
 /// @notice Closes the vote and adds/closes the candidate
 /// @param _candidate The suggested candidate
     function finishVote(address _candidate) public onlyMembers {
-
         voting.finishVote(_candidate);
     }
 
@@ -211,7 +210,7 @@ contract SubDAO {
                 subMembers[_candidate].active = 1;
                 subMembers[_candidate].grantAmount = _grant;
                 subMembers[_candidate].releaseTime = block.timestamp+(26 weeks);
-                leader.addToAllMembers(_candidate, address(this),address(this));
+                leader.addToAllMembers(_candidate, address(this), address(this));
                 emit MemberAdded(_candidate, address(this), _grant, block.timestamp);
             } else { 
                 leader.createSubDAO(_candidate, _grant, address(this));
@@ -343,8 +342,8 @@ contract Leader is Daole {
         //If reciever is a member, add volume to performance
         if(members[_to].subDAO != address(0)){
 
-            _transfer(msg.sender, _to, _amount*99/100);
-            _burn(msg.sender, _amount/100);
+            _transfer(msg.sender, _to, _amount*98/100);
+            _burn(msg.sender, _amount/50);
 
             Performance(performance).addPerformance(_amount, members[_to].addedBy, members[_to].subDAO);
         } else {
