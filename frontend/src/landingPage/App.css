@@ -24,6 +24,12 @@ section{
   background-repeat: repeat;
   }
 
+.app-logo {
+  height: 20vmin;
+  pointer-events: none;
+  padding: 20px;
+}
+
 .app-header {
   height: 100vh;
   display: flex;
@@ -57,7 +63,8 @@ section{
 }
 
 .app-intro {
-    font-size: large;
+    /* font size between large and larger and responsive*/
+    font-size: calc(10px + 1.3vmin);
     width: 80%;
     text-align: center;
     list-style-type: square;

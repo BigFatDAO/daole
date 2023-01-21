@@ -103,6 +103,8 @@ before(async function () {
 });
 
 describe('Basic Set up', function () { 
+    // still need to check minting and burning
+    
     it("check totalSupply", async function () {
         supply = await leader.totalSupply()
         subMint = 1125000
