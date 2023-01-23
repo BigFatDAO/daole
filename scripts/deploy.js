@@ -61,8 +61,8 @@ async function main() {
 
 
 
-  //get sub factory address and deploy sub factory
-  const subFactoryAddress = await leader.subFactoryAddress();
+  //get club factory address and deploy club factory
+  const clubFactoryAddress = await leader.clubFactoryAddress();
 
   //get voting address
   const votingAddress = await leader.votingAddress();
@@ -73,33 +73,33 @@ async function main() {
   // save voting and voting address to frontend
   saveFrontendFiles("Voting", voting);
 
-  //pass the sub factory address to the whitelist
-  await whiteList.addSubFactoryAddress(subFactoryAddress);
+  //pass the club factory address to the whitelist
+  await whiteList.addClubFactoryAddress(clubFactoryAddress);
 
-  //pass the leader address to the sub timeLock
+  //pass the leader address to the club timeLock
   await timeLock.setLeader(leader.address);
 
   console.log("are we here?");
-  //let whitelisted members create their subs
-  await whiteList.connect(member1).createSub();
-  await whiteList.connect(member2).createSub();
-  await whiteList.connect(member3).createSub();
-  await whiteList.connect(member4).createSub();
-  await whiteList.connect(member5).createSub();
-  await whiteList.connect(member6).createSub();
+  //let whitelisted members create their clubs
+  await whiteList.connect(member1).createClub();
+  await whiteList.connect(member2).createClub();
+  await whiteList.connect(member3).createClub();
+  await whiteList.connect(member4).createClub();
+  await whiteList.connect(member5).createClub();
+  await whiteList.connect(member6).createClub();
 
-  console.log("Subs created");
+  console.log("Clubs created");
 
-  // save subdao artifact to frontend
-  const subDAOArtifact = artifacts.readArtifactSync("SubDAO");
+  // save club artifact to frontend
+  const clubArtifact = artifacts.readArtifactSync("Club");
   const fs = require("fs");
   const contractsDir = path.join(__dirname, "..", "frontend", "src", "contracts");
   if (!fs.existsSync(contractsDir)) {
     fs.mkdirSync(contractsDir);
   }
   fs.writeFileSync(
-    path.join(contractsDir, "SubDAO.json"),
-    JSON.stringify(subDAOArtifact, null, 2)
+    path.join(contractsDir, "Club.json"),
+    JSON.stringify(clubArtifact, null, 2)
   );
 
   // function to save to frontend

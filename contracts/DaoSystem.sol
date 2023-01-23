@@ -16,7 +16,7 @@ contract Voting {
         int8 votes;
         uint creationTime;
         uint grantAmount;
-        address subDAO;
+        address club;
         mapping (address => bool) vote;
     }
 
@@ -36,8 +36,8 @@ contract Voting {
         timeLock = TimeLock(_timeLock);
     }
 
-    modifier onlySubs {
-        require(leader.isSubDAO(msg.sender),"not a sub");
+    modifier onlyClubs {
+        require(leader.isClub(msg.sender),"not a club");
         _;
     }
 
@@ -46,17 +46,17 @@ contract Voting {
 /// @param _grantAmount Grant size for the new candidate
 /// @param _suggestedBy The member that suggested this candidate
 
-    function createVote(address _candidate, uint _grantAmount, address _suggestedBy) public onlySubs {
+    function createVote(address _candidate, uint _grantAmount, address _suggestedBy) public onlyClubs {
         require(_candidate != address(leader), "no leader");
-        require(!leader.isSubDAO(_candidate),"no subs");
-        require(leader.subOfMember(_candidate)==address(0),"is member");
+        require(!leader.isClub(_candidate),"no clubs");
+        require(leader.clubOfMember(_candidate)==address(0),"is member");
         require(!candidates[_candidate].open, "already been suggested");
         // some of these values need to be set to 0 or false because they may have already been a candidate
         candidates[_candidate].open = true;
         candidates[_candidate].accepted = false;
         candidates[_candidate].creationTime = block.timestamp;
         candidates[_candidate].grantAmount = _grantAmount;
-        candidates[_candidate].subDAO = msg.sender;
+        candidates[_candidate].club = msg.sender;
         candidates[_candidate].votes = 0;
 
         openCandidates[msg.sender].push(_candidate);
@@ -75,7 +75,7 @@ contract Voting {
 /// @param _candidate The suggested candidate to be voted on
 /// @param _voter the member voting
 /// @param _vote the vote, +1 or -1
-    function vote(address _candidate, address _voter, int8 _vote) public onlySubs {
+    function vote(address _candidate, address _voter, int8 _vote) public onlyClubs {
         require(!candidates[_candidate].vote[_voter],"voted");
         require(_vote == 1 || _vote == -1, "vote not right");
         require(candidates[_candidate].open, "not open");
@@ -87,7 +87,7 @@ contract Voting {
 
 /// @notice Closes the vote and adds/closes the candidate
 /// @param _candidate The suggested candidate
-    function finishVote(address _candidate) public onlySubs {
+    function finishVote(address _candidate) public onlyClubs {
         require(block.timestamp > candidates[_candidate].creationTime+2 weeks, "too soon bro");
         require(candidates[_candidate].open == true, "not open");
 
@@ -112,61 +112,61 @@ contract Voting {
             leader.increaseAllowance(address(timeLock), candidates[_candidate].grantAmount);
             timeLock.deposit(_candidate ,candidates[_candidate].grantAmount);
 
-            SubDAO(candidates[_candidate].subDAO).passVote(_candidate, candidates[_candidate].grantAmount);
+            Club(candidates[_candidate].club).passVote(_candidate, candidates[_candidate].grantAmount);
         } else {
             emit VoteCompleted(_candidate, false, block.timestamp);
-            leader.transfer(candidates[_candidate].subDAO, candidates[_candidate].grantAmount);
+            leader.transfer(candidates[_candidate].club, candidates[_candidate].grantAmount);
         }
     }
 
-/// @notice shows the open candidates for a sub
-/// @param _subDAO The subDAO to show openCandidates for
-/// @return An array of the open candidates for this sub
+/// @notice shows the open candidates for a club
+/// @param _club The club to show openCandidates for
+/// @return An array of the open candidates for this club
 
-    function opens(address _subDAO) public view returns (address[] memory) {
-        return openCandidates[_subDAO];
+    function opens(address _club) public view returns (address[] memory) {
+        return openCandidates[_club];
     }
 
 }
 
 
-///@notice The SubDAO contract that members interact with. Stores member details
-contract SubDAO {
+///@notice The Club contract that members interact with. Stores member details
+contract Club {
     bool locked;
     uint8 public numberOfMembers;
     address[] public members;
-    mapping(address => uint256) public subMembers;
+    mapping(address => uint256) public clubMembers;
 
     Leader leader;
     mapping(uint256 => bool) paid;
 
     Voting voting;
     TimeLock timeLock;
-    SubFactory subFactory;
+    ClubFactory clubFactory;
 
     //Events:  
     event MemberRemoved(address indexed _member, uint _time);
     event MemberAdded(address indexed _newMember, address indexed _addedBy, uint _grantAmount, uint _time);
 
-/// @notice constructor, sets up sub and adds the first member
+/// @notice constructor, sets up club and adds the first member
 /// @param _leaderAddress The address of the leader
 /// @param _voting The address of the voting contract
-/// @param _member The first member that will be added to the sub
-/// @param _subFactory The address of the subFactory
-    constructor(address _leaderAddress, address _voting, address _timeLock, address _subFactory, address _member) {
+/// @param _member The first member that will be added to the club
+/// @param _clubFactory The address of the clubFactory
+    constructor(address _leaderAddress, address _voting, address _timeLock, address _clubFactory, address _member) {
         locked = false;
         paid[block.timestamp/(4 weeks)]=true;
         leader = Leader(_leaderAddress);
         voting = Voting(_voting);
         timeLock = TimeLock(_timeLock);
-        subFactory = SubFactory(_subFactory);
+        clubFactory = ClubFactory(_clubFactory);
         members.push(_member);
         numberOfMembers = 1;
-        subMembers[_member] = 1;
+        clubMembers[_member] = 1;
     }
 
     modifier onlyMembers {
-        require(subMembers[msg.sender]>0,"not active member");
+        require(clubMembers[msg.sender]>0,"not active member");
         _;
     }
 
@@ -175,7 +175,7 @@ contract SubDAO {
         _;
     }
 
-/// @notice Allows a member to submit a candiate to be voted on by their sub, also votes yes for them
+/// @notice Allows a member to submit a candiate to be voted on by their club, also votes yes for them
 /// @param _candidate The suggested candidate to be voted on
 /// @param _grantAmount Grant size for the new candidate
     function createVote(address _candidate, uint _grantAmount) public onlyMembers {
@@ -210,20 +210,20 @@ contract SubDAO {
             if(members.length<7){
                 members.push(_candidate);
                 numberOfMembers += 1;
-                subMembers[_candidate] = 1;
+                clubMembers[_candidate] = 1;
                 leader.addToAllMembers(_candidate, address(this), address(this));
                 emit MemberAdded(_candidate, address(this), _grant, block.timestamp);
             } else { 
-                subFactory.createSubDAO(_candidate, address(this));
+                clubFactory.createClub(_candidate, address(this));
             }         
         }
 
-/// @notice Calls the Leader contract to pay this sub
+/// @notice Calls the Leader contract to pay this club
     function payMembers() public onlyMembers {
         uint256 month = block.timestamp/(4 weeks);
         require(!paid[month],"paid");
         paid[month]=true;
-        leader.paySubs();
+        leader.payClubs();
     }
 
     function getMembers () public view returns (address[] memory) {
@@ -233,12 +233,12 @@ contract SubDAO {
 }
 
 
-///@notice The subFactory creates SubDAOs
-contract SubFactory {
+///@notice The clubFactory creates Clubs
+contract ClubFactory {
     address public leader;
     address public whiteList;
     address public timeLock;
-    uint256 public numberOfSubs;
+    uint256 public numberOfClubs;
 
 /// @notice Adds Leader and Whitelist address
 /// @param _leader The Leader contract
@@ -249,89 +249,88 @@ contract SubFactory {
         timeLock = _timeLock;
     }
 
-/// @notice Creates a new sub
-/// @param _member1 The first member of the sub
-/// @param _addedBy The sub that added member1
-    function createSubDAO (address _member1, address _addedBy) public {
-        require(Leader(leader).isSubDAO(msg.sender) || msg.sender == whiteList);
-        SubDAO subDAO = new SubDAO(leader, Leader(leader).votingAddress(),timeLock, address(this), _member1);
-        Leader(leader).finishCreation(_member1, address(subDAO), _addedBy);
+/// @notice Creates a new club
+/// @param _member1 The first member of the club
+/// @param _addedBy The club that added member1
+    function createClub (address _member1, address _addedBy) public {
+        require(Leader(leader).isClub(msg.sender) || msg.sender == whiteList);
+        Club club = new Club(leader, Leader(leader).votingAddress(),timeLock, address(this), _member1);
+        Leader(leader).finishCreation(_member1, address(club), _addedBy);
         if(msg.sender == whiteList) {
-            Leader(leader).transfer(address(subDAO), 1125e21);
+            Leader(leader).transfer(address(club), 1125e21);
             Leader(leader).increaseAllowance(timeLock, 1125e21);
             TimeLock(timeLock).deposit(_member1, 1125e21);
         }
-        numberOfSubs += 1;
+        numberOfClubs += 1;
     }
 }
 
 
-/// @notice The Leader contract calculates subs performace. Mints, transfers and burns.
+/// @notice The Leader contract calculates clubs performace. Mints, transfers and burns.
 contract Leader is Daole {
-    address public subFactoryAddress;
+    address public clubFactoryAddress;
     address public votingAddress;
     address public whiteList;
     address public performance;
     mapping (uint => uint) totalGrants;
-    mapping (address => bool) subs;
+    mapping (address => bool) clubs;
 
     struct memberDeets {
         address addedBy;
-        address subDAO;
+        address club;
     }
     mapping (address => memberDeets) members;
 
 
     event Log(string func);
 
-/// @notice Creates subFactory and Voting contracts
+/// @notice Creates clubFactory and Voting contracts
 /// @param _whiteList The whitelist contract address
     constructor(address _whiteList, address _timeLock) Daole() {
         whiteList = _whiteList;
         Voting voting = new Voting(address(this), _timeLock);
         votingAddress = address(voting);
-        SubFactory subFactory = new SubFactory(address(this),_whiteList, _timeLock);
-        subFactoryAddress = address(subFactory);
+        ClubFactory clubFactory = new ClubFactory(address(this),_whiteList, _timeLock);
+        clubFactoryAddress = address(clubFactory);
         Performance perf = new Performance(address(this));
         performance = address(perf);
-        _mint(subFactoryAddress,225e24);
+        _mint(clubFactoryAddress,225e24);
     }
 
-    modifier onlySubs{
-        require(subs[msg.sender],"not sub");
+    modifier onlyClubs{
+        require(clubs[msg.sender],"not club");
         _;
     }
 
-/// @notice Adds the new sub to subs struct, mints grant to the new sub
-/// @param _member1 The first member of the sub
-/// @param _subDAO The sub that's just been created
-/// @param _addedBy The sub that added member1
-    function finishCreation(address _member1, address _subDAO, address _addedBy) public {
-        require(msg.sender == subFactoryAddress,"not factory");
-        subs[_subDAO] = true;
-        Performance(performance).addSub();
-        addToAllMembers(_member1, _addedBy, _subDAO);
-//        emit SubDAOCreated(_owner, _addedBy, _grantAmount, block.timestamp);
+/// @notice Adds the new club to clubs struct, mints grant to the new club
+/// @param _member1 The first member of the club
+/// @param _club The club that's just been created
+/// @param _addedBy The club that added member1
+    function finishCreation(address _member1, address _club, address _addedBy) public {
+        require(msg.sender == clubFactoryAddress,"not factory");
+        clubs[_club] = true;
+        addToAllMembers(_member1, _addedBy, _club);
+//        emit ClubCreated(_owner, _addedBy, _grantAmount, block.timestamp);
     }
 
-/// @notice Transfers. Adds transfers to members to their subs' performance
+/// @notice Transfers. Adds transfers to members to their clubs' performance
 /// @param _to The receiver
 /// @param _amount Transfer size
     function transfer(address _to, uint _amount) public override returns (bool) {
         //If reciever is a member, add volume to performance
-        if(members[_to].subDAO != address(0)){
+        if(members[_to].club != address(0)){
             _transfer(msg.sender, _to, _amount*98/100);
             _burn(msg.sender, _amount/50);
-            Performance(performance).addPerformance(_amount, members[_to].addedBy, members[_to].subDAO);
+            Performance(performance).addPerformance(_amount, members[_to].addedBy, members[_to].club);
         } else {
             _transfer(msg.sender, _to, _amount);
         }
         return true;
     }
 
-/// @notice 4-weekly payment to subDAOs, called by the sub contracts
-/// @dev can this be used to fund the initial 100 subs?
-    function paySubs() public onlySubs {
+/// @notice 4-weekly payment to clubs, called by the club contracts
+/// @dev can this be used to fund the initial 100 clubs?
+    function payClubs() public onlyClubs {
         uint month = block.timestamp/(4 weeks);
 
         if(totalGrants[month]==0){
@@ -343,41 +342,41 @@ contract Leader is Daole {
         _mint(msg.sender, payment);
     }
 
-/// @notice Called by subs or subFactory to add members to the leader mappings
+/// @notice Called by clubs or clubFactory to add members to the leader mappings
 /// @param _memberAddress Member to be added
-/// @param _addedBy The sub that added the member
-/// @param _subDAO The sub of the member
+/// @param _addedBy The club that added the member
+/// @param _club The club of the member
     function addToAllMembers(
         address _memberAddress, 
         address _addedBy, 
-        address _subDAO 
+        address _club 
     ) 
         public 
     {
-        require(subs[msg.sender]||msg.sender==subFactoryAddress);
+        require(clubs[msg.sender]||msg.sender==clubFactoryAddress);
         members[_memberAddress].addedBy = _addedBy;
-        members[_memberAddress].subDAO = _subDAO;
+        members[_memberAddress].club = _club;
     }
 
-/// @notice Returns the sub of an address
+/// @notice Returns the club of an address
 /// @param _member The member
-/// @return The sub of the member - returns zero address if not a member
-    function subOfMember(address _member) public view returns (address) {
-        return members[_member].subDAO;
+/// @return The club of the member - returns zero address if not a member
+    function clubOfMember(address _member) public view returns (address) {
+        return members[_member].club;
     }
 
-/// @notice Returns the sub that added a member
+/// @notice Returns the club that added a member
 /// @param _member The member
-/// @return The sub that added the member - returns zero if not a member
+/// @return The club that added the member - returns zero if not a member
     function getAddedBy(address _member) public view returns (address) {
         return members[_member].addedBy;
     }
 
-/// @notice Is the address a sub?
-/// @param _subDAO The address
-/// @return Is it a sub - T/F
-    function isSubDAO(address _subDAO) public view returns (bool) {
-        return subs[_subDAO];
+/// @notice Is the address a club?
+/// @param _club The address
+/// @return Is it a club - T/F
+    function isClub(address _club) public view returns (bool) {
+        return clubs[_club];
     }
     
 /// @notice fallback function    
@@ -389,11 +388,11 @@ contract Leader is Daole {
 }
 
 
-/// @notice WhiteListed addresses that can create their own subs
+/// @notice WhiteListed addresses that can create their own clubs
 contract WhiteList{
     mapping(address => bool) whiteList;
     address public owner;
-    address public subFactoryAddress;
+    address public clubFactoryAddress;
 
 /// @notice adds owner
     constructor(){
@@ -405,10 +404,10 @@ contract WhiteList{
         _;
     }
 
-/// @notice adds subFactory address
-/// @param _subFactoryAddress The subFactory address
-    function addSubFactoryAddress(address _subFactoryAddress) public onlyOwner {
-        subFactoryAddress = _subFactoryAddress;
+/// @notice adds clubFactory address
+/// @param _clubFactoryAddress The clubFactory address
+    function addClubFactoryAddress(address _clubFactoryAddress) public onlyOwner {
+        clubFactoryAddress = _clubFactoryAddress;
     }
 
 /// @notice Adds an address to the WhiteList - only owner.
@@ -418,19 +417,19 @@ contract WhiteList{
         whiteList[_winner] = true;
     }
 
-/// @notice Creates a sub for a whitelisted address
-    function createSub() public {
+/// @notice Creates a club for a whitelisted address
+    function createClub() public {
         require(whiteList[msg.sender]==true,"not whitelisted");
-        SubFactory(subFactoryAddress).createSubDAO(msg.sender,address(this));
+        ClubFactory(clubFactoryAddress).createClub(msg.sender,address(this));
     }
 
 }
 
 contract Performance {
     uint initialMonth;
-    uint public totalSubs;
+    uint public totalClubs;
     Leader leader;
-    mapping(address => mapping(uint => uint)) public subPerformance;
+    mapping(address => mapping(uint => uint)) public clubPerformance;
     mapping(uint => uint) public totalPerformance;
     
     // constructor - adds leader address
@@ -443,26 +442,22 @@ contract Performance {
         _;
     }
 
-    function addSub() public onlyLeader {
-        totalSubs += 1;
-    }
-
-    function addPerformance(uint _amount, address _addedBy, address _subDAO) public onlyLeader {
+    function addPerformance(uint _amount, address _addedBy, address _club) public onlyLeader {
         uint month = block.timestamp/(4 weeks);
         
-        subPerformance[_addedBy][month+1] += (_amount/2);
-        subPerformance[_subDAO][month+1] += (_amount/2);
+        clubPerformance[_addedBy][month+1] += (_amount/2);
+        clubPerformance[_club][month+1] += (_amount/2);
                 
         totalPerformance[month+1] += (_amount);
     }
 
-    function getPayment(uint _monthlyGrants, address _subDAO) public view returns (uint) {
+    function getPayment(uint _monthlyGrants, address _club) public view returns (uint) {
         uint month = block.timestamp/(4 weeks);
 
         if(totalPerformance[month] == 0){
-            return _monthlyGrants / totalSubs;
+            return _monthlyGrants / totalClubs;
         } else {
-            return _monthlyGrants * subPerformance[_subDAO][month] / totalPerformance[month];
+            return _monthlyGrants * clubPerformance[_club][month] / totalPerformance[month];
         }
     }
 
