@@ -8,6 +8,17 @@ async function main() {
   // get a deployer address and 10 members addresses
   const [deployer, member1, member2, member3, member4, member5, member6, member7, member8, member9, member10] = await hre.ethers.getSigners();
 
+  //deploy timelock
+  const TimeLock = await hre.ethers.getContractFactory("TimeLock");
+  const timeLock = await TimeLock.deploy();
+  await timeLock.deployed();
+  console.log("TimeLock deployed to:", timeLock.address);
+  //save to the frontend
+  saveFrontendFiles("TimeLock", timeLock);
+  //get gas used
+  const timeLockGasUsed = await timeLock.deployTransaction.wait();
+  console.log("TimeLock gas used:", timeLockGasUsed.gasUsed.toString());
+
   //deploy WhiteList
   const WhiteList = await hre.ethers.getContractFactory("WhiteList");
   const whiteList = await WhiteList.deploy();
@@ -36,7 +47,7 @@ async function main() {
 
   // deploy leader
   const Leader = await hre.ethers.getContractFactory("Leader");
-  const leader = await Leader.deploy(whiteList.address);
+  const leader = await Leader.deploy(whiteList.address, timeLock.address);
   await leader.deployed();
   console.log("Leader deployed to:", leader.address);
   //save to the frontend
@@ -47,6 +58,8 @@ async function main() {
   //get gas used for deployment
   const leaderGasUsed = await leader.deployTransaction.gasLimit;
   console.log("Leader gas used:", leaderGasUsed.toString());
+
+
 
   //get sub factory address and deploy sub factory
   const subFactoryAddress = await leader.subFactoryAddress();
@@ -60,14 +73,20 @@ async function main() {
   // save voting and voting address to frontend
   saveFrontendFiles("Voting", voting);
 
-  
+  //pass the sub factory address to the whitelist
+  await whiteList.addSubFactoryAddress(subFactoryAddress);
+
+  //pass the leader address to the sub timeLock
+  await timeLock.setLeader(leader.address);
+
+  console.log("are we here?");
   //let whitelisted members create their subs
-  await whiteList.connect(member1).createSub(subFactoryAddress);
-  await whiteList.connect(member2).createSub(subFactoryAddress);
-  await whiteList.connect(member3).createSub(subFactoryAddress);
-  await whiteList.connect(member4).createSub(subFactoryAddress);
-  await whiteList.connect(member5).createSub(subFactoryAddress);
-  await whiteList.connect(member6).createSub(subFactoryAddress);
+  await whiteList.connect(member1).createSub();
+  await whiteList.connect(member2).createSub();
+  await whiteList.connect(member3).createSub();
+  await whiteList.connect(member4).createSub();
+  await whiteList.connect(member5).createSub();
+  await whiteList.connect(member6).createSub();
 
   console.log("Subs created");
 

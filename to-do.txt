@@ -1,0 +1,8 @@
+Double check last changes
+
+Redo tests
+
+Rename all contracts
+
+Change all the imports to interfaces
+    iLeader is IERC20 -> then add all the other functions

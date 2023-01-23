@@ -25,13 +25,15 @@ contract Voting {
     mapping(address => address[]) openCandidates;
 
     Leader leader;
+    TimeLock timeLock;
 
     event VoteCreated(address indexed _suggestedBy, address indexed _candidate, uint _time);
     event Voted(address indexed _member, address indexed _candidate, int8 _vote, uint _time);
     event VoteCompleted(address indexed _candidate, bool indexed _accepted, uint _time);
 
-    constructor(address _leader) {
+    constructor(address _leader, address _timeLock) {
         leader = Leader(_leader);
+        timeLock = TimeLock(_timeLock);
     }
 
     modifier onlySubs {
@@ -44,8 +46,7 @@ contract Voting {
 /// @param _grantAmount Grant size for the new candidate
 /// @param _suggestedBy The member that suggested this candidate
 
-    function createVote(address _candidate, uint _grantAmount, address _suggestedBy, uint _effectiveBalance) public onlySubs {
-        require(_grantAmount <= _effectiveBalance,"too big");
+    function createVote(address _candidate, uint _grantAmount, address _suggestedBy) public onlySubs {
         require(_candidate != address(leader), "no leader");
         require(!leader.isSubDAO(_candidate),"no subs");
         require(leader.subOfMember(_candidate)==address(0),"is member");
@@ -107,10 +108,14 @@ contract Voting {
         if(candidates[_candidate].votes>=1){
             require(candidates[_candidate].accepted == true, "has not accepted");
             emit VoteCompleted(_candidate, true, block.timestamp);
+            // deposit the grant into the timeLock
+            leader.increaseAllowance(address(timeLock), candidates[_candidate].grantAmount);
+            timeLock.deposit(_candidate ,candidates[_candidate].grantAmount);
+
             SubDAO(candidates[_candidate].subDAO).passVote(_candidate, candidates[_candidate].grantAmount);
         } else {
             emit VoteCompleted(_candidate, false, block.timestamp);
-            SubDAO(candidates[_candidate].subDAO).addBalance(candidates[_candidate].grantAmount);
+            leader.transfer(candidates[_candidate].subDAO, candidates[_candidate].grantAmount);
         }
     }
 
@@ -129,19 +134,15 @@ contract Voting {
 contract SubDAO {
     bool locked;
     uint8 public numberOfMembers;
-    uint256 public effectiveBalance;
     address[] public members;
-    
+    mapping(address => uint256) public subMembers;
+
     Leader leader;
     mapping(uint256 => bool) paid;
-    struct subMember {
-        uint256 active;
-        uint256 grantAmount;
-        uint256 nextSuggestion;
-        uint256 releaseTime;
-    }
-    mapping(address => subMember) public subMembers;
+
     Voting voting;
+    TimeLock timeLock;
+    SubFactory subFactory;
 
     //Events:  
     event MemberRemoved(address indexed _member, uint _time);
@@ -151,21 +152,21 @@ contract SubDAO {
 /// @param _leaderAddress The address of the leader
 /// @param _voting The address of the voting contract
 /// @param _member The first member that will be added to the sub
-/// @param _grantAmount The grant size for first member
-    constructor(address _leaderAddress, address _voting, address _member, uint _grantAmount ) {
+/// @param _subFactory The address of the subFactory
+    constructor(address _leaderAddress, address _voting, address _timeLock, address _subFactory, address _member) {
         locked = false;
         paid[block.timestamp/(4 weeks)]=true;
         leader = Leader(_leaderAddress);
         voting = Voting(_voting);
+        timeLock = TimeLock(_timeLock);
+        subFactory = SubFactory(_subFactory);
         members.push(_member);
         numberOfMembers = 1;
-        subMembers[_member].active = 1;
-        subMembers[_member].grantAmount = _grantAmount;
-        subMembers[_member].releaseTime = block.timestamp + (26 weeks);
+        subMembers[_member] = 1;
     }
 
     modifier onlyMembers {
-        require(subMembers[msg.sender].active>0,"not active member");
+        require(subMembers[msg.sender]>0,"not active member");
         _;
     }
 
@@ -178,11 +179,13 @@ contract SubDAO {
 /// @param _candidate The suggested candidate to be voted on
 /// @param _grantAmount Grant size for the new candidate
     function createVote(address _candidate, uint _grantAmount) public onlyMembers {
-        require(block.timestamp>subMembers[msg.sender].nextSuggestion,"wait");
-        voting.createVote(_candidate, _grantAmount, msg.sender, effectiveBalance);
+        //make sure this contract has enough funds to pay the grant
+        require(_grantAmount <= leader.balanceOf(address(this)), "not enough funds");
+        // send the grant to the voting contract
+        leader.transfer(address(voting), _grantAmount);  
+        //create the vote
+        voting.createVote(_candidate, _grantAmount, msg.sender);
         vote(_candidate, 1);
-        effectiveBalance -= _grantAmount;
-        subMembers[msg.sender].nextSuggestion = block.timestamp + 2 weeks;
     }
 
 /// @notice Adds the votes for a candidate
@@ -207,13 +210,11 @@ contract SubDAO {
             if(members.length<7){
                 members.push(_candidate);
                 numberOfMembers += 1;
-                subMembers[_candidate].active = 1;
-                subMembers[_candidate].grantAmount = _grant;
-                subMembers[_candidate].releaseTime = block.timestamp+(26 weeks);
+                subMembers[_candidate] = 1;
                 leader.addToAllMembers(_candidate, address(this), address(this));
                 emit MemberAdded(_candidate, address(this), _grant, block.timestamp);
             } else { 
-                leader.createSubDAO(_candidate, _grant, address(this));
+                subFactory.createSubDAO(_candidate, address(this));
             }         
         }
 
@@ -223,22 +224,6 @@ contract SubDAO {
         require(!paid[month],"paid");
         paid[month]=true;
         leader.paySubs();
-    }
-
-/// @notice Withdraws the grant for the caller, if they are a member
-    function withdrawGrant() public {
-        require(block.timestamp > subMembers[msg.sender].releaseTime, "locked");
-        require(subMembers[msg.sender].grantAmount > 0, "no grant");
-        uint grant = subMembers[msg.sender].grantAmount;
-        subMembers[msg.sender].grantAmount = 0;
-        leader.transfer(msg.sender, grant);
-    }
-
-/// @notice Called by leader or voting contract to add to effectiveBalance
-/// @param _payment The amount to be added
-    function addBalance (uint _payment) public {
-        require(msg.sender == address(leader) || msg.sender == address(voting));
-        effectiveBalance += _payment;
     }
 
     function getMembers () public view returns (address[] memory) {
@@ -252,26 +237,31 @@ contract SubDAO {
 contract SubFactory {
     address public leader;
     address public whiteList;
+    address public timeLock;
+    uint256 public numberOfSubs;
 
 /// @notice Adds Leader and Whitelist address
 /// @param _leader The Leader contract
 /// @param _whiteList The Whitelist contract
-    constructor (address _leader, address _whiteList) {
+    constructor (address _leader, address _whiteList, address _timeLock) {
         leader = _leader;
         whiteList = _whiteList;
+        timeLock = _timeLock;
     }
 
 /// @notice Creates a new sub
 /// @param _member1 The first member of the sub
-/// @param _grantAmount First member grant size
 /// @param _addedBy The sub that added member1
-    function createSubDAO (address _member1, uint _grantAmount, address _addedBy) public {
-        require(msg.sender == leader || msg.sender == whiteList);
-        SubDAO subDAO = new SubDAO(leader, Leader(leader).votingAddress(),_member1, _grantAmount);
-        Leader(leader).finishCreation(_member1, address(subDAO), _grantAmount, _addedBy);
+    function createSubDAO (address _member1, address _addedBy) public {
+        require(Leader(leader).isSubDAO(msg.sender) || msg.sender == whiteList);
+        SubDAO subDAO = new SubDAO(leader, Leader(leader).votingAddress(),timeLock, address(this), _member1);
+        Leader(leader).finishCreation(_member1, address(subDAO), _addedBy);
         if(msg.sender == whiteList) {
             Leader(leader).transfer(address(subDAO), 1125e21);
+            Leader(leader).increaseAllowance(timeLock, 1125e21);
+            TimeLock(timeLock).deposit(_member1, 1125e21);
         }
+        numberOfSubs += 1;
     }
 }
 
@@ -280,6 +270,7 @@ contract SubFactory {
 contract Leader is Daole {
     address public subFactoryAddress;
     address public votingAddress;
+    address public whiteList;
     address public performance;
     mapping (uint => uint) totalGrants;
     mapping (address => bool) subs;
@@ -290,18 +281,20 @@ contract Leader is Daole {
     }
     mapping (address => memberDeets) members;
 
+
     event Log(string func);
 
 /// @notice Creates subFactory and Voting contracts
 /// @param _whiteList The whitelist contract address
-    constructor(address _whiteList) Daole() {
-        Voting voting = new Voting(address(this));
+    constructor(address _whiteList, address _timeLock) Daole() {
+        whiteList = _whiteList;
+        Voting voting = new Voting(address(this), _timeLock);
         votingAddress = address(voting);
-        SubFactory subFactory = new SubFactory(address(this),_whiteList);
+        SubFactory subFactory = new SubFactory(address(this),_whiteList, _timeLock);
         subFactoryAddress = address(subFactory);
         Performance perf = new Performance(address(this));
         performance = address(perf);
-        _mint(subFactoryAddress,1125e23);
+        _mint(subFactoryAddress,225e24);
     }
 
     modifier onlySubs{
@@ -309,24 +302,13 @@ contract Leader is Daole {
         _;
     }
 
-/// @notice Starts creation of a new sub, burns the grant from the old sub
-/// @param _member1 The first member of the sub
-/// @param _grantAmount First member grant size
-/// @param _addedBy The sub that added member1
-    function createSubDAO (address _member1, uint _grantAmount, address _addedBy) public onlySubs {
-        _burn(msg.sender, _grantAmount);
-        SubFactory(subFactoryAddress).createSubDAO(_member1, _grantAmount, _addedBy);
-    }
-
 /// @notice Adds the new sub to subs struct, mints grant to the new sub
 /// @param _member1 The first member of the sub
 /// @param _subDAO The sub that's just been created
-/// @param _grantAmount First member grant size
 /// @param _addedBy The sub that added member1
-    function finishCreation(address _member1, address _subDAO, uint _grantAmount, address _addedBy) public {
+    function finishCreation(address _member1, address _subDAO, address _addedBy) public {
         require(msg.sender == subFactoryAddress,"not factory");
         subs[_subDAO] = true;
-        _mint(_subDAO, _grantAmount);
         Performance(performance).addSub();
         addToAllMembers(_member1, _addedBy, _subDAO);
 //        emit SubDAOCreated(_owner, _addedBy, _grantAmount, block.timestamp);
@@ -336,15 +318,10 @@ contract Leader is Daole {
 /// @param _to The receiver
 /// @param _amount Transfer size
     function transfer(address _to, uint _amount) public override returns (bool) {
-        if(subs[_to]) {
-            SubDAO(_to).addBalance(_amount);
-        } 
         //If reciever is a member, add volume to performance
         if(members[_to].subDAO != address(0)){
-
             _transfer(msg.sender, _to, _amount*98/100);
             _burn(msg.sender, _amount/50);
-
             Performance(performance).addPerformance(_amount, members[_to].addedBy, members[_to].subDAO);
         } else {
             _transfer(msg.sender, _to, _amount);
@@ -353,17 +330,17 @@ contract Leader is Daole {
     }
 
 /// @notice 4-weekly payment to subDAOs, called by the sub contracts
+/// @dev can this be used to fund the initial 100 subs?
     function paySubs() public onlySubs {
         uint month = block.timestamp/(4 weeks);
 
         if(totalGrants[month]==0){
-            totalGrants[month] = (MAX_SUPPLY - totalSupply())*9/200;
+            totalGrants[month] = (MAX_SUPPLY - totalSupply())*4/100;
         }
 
         uint payment = Performance(performance).getPayment(totalGrants[month], msg.sender);
 
         _mint(msg.sender, payment);
-        SubDAO(msg.sender).addBalance(payment);
     }
 
 /// @notice Called by subs or subFactory to add members to the leader mappings
@@ -416,6 +393,7 @@ contract Leader is Daole {
 contract WhiteList{
     mapping(address => bool) whiteList;
     address public owner;
+    address public subFactoryAddress;
 
 /// @notice adds owner
     constructor(){
@@ -427,17 +405,23 @@ contract WhiteList{
         _;
     }
 
-/// @notice Adds an address to the WhiteList - only owner
+/// @notice adds subFactory address
+/// @param _subFactoryAddress The subFactory address
+    function addSubFactoryAddress(address _subFactoryAddress) public onlyOwner {
+        subFactoryAddress = _subFactoryAddress;
+    }
+
+/// @notice Adds an address to the WhiteList - only owner.
+/// @dev This is a placeholder. Needs to be updated to burn an NFT to add to the whitelist
 /// @param _winner The address to add to the whitelist
     function addToWhiteList(address _winner) public onlyOwner {
         whiteList[_winner] = true;
     }
 
 /// @notice Creates a sub for a whitelisted address
-/// @param _subFactoryAddress Pass in the address of the subFactory
-    function createSub(address _subFactoryAddress) public {
+    function createSub() public {
         require(whiteList[msg.sender]==true,"not whitelisted");
-        SubFactory(_subFactoryAddress).createSubDAO(msg.sender,1125e21,address(this));
+        SubFactory(subFactoryAddress).createSubDAO(msg.sender,address(this));
     }
 
 }
@@ -481,5 +465,60 @@ contract Performance {
             return _monthlyGrants * subPerformance[_subDAO][month] / totalPerformance[month];
         }
     }
+
+}
+
+// holds the member grants for 6 months
+contract TimeLock {
+    struct balances {
+        uint256 balance;
+        uint256 releaseTime;
+    }
+
+    address public leader;
+    address public owner;
+
+    mapping(address => balances) releases;
+
+    constructor() {
+        owner = msg.sender;
+    }
+
+    modifier onlyOwner {
+        require(msg.sender == owner, "not owner");
+        _;
+    }
+
+    //set leader address
+    function setLeader(address _leader) public onlyOwner {
+        leader = _leader;
+    }
+
+    //deposit function updates balance and sets locktime
+    function deposit(address _member, uint256 _amount) public {
+        require(_amount > 0, "amount must be greater than 0");
+        releases[_member].releaseTime = block.timestamp + (26 weeks);
+        releases[_member].balance += _amount;
+        Leader(leader).transferFrom(msg.sender, address(this), _amount);        
+    }
+
+    //withdraw function releases funds after 6 months
+    function withdraw() public {
+        require(releases[msg.sender].balance > 0, "no balance");
+        require(releases[msg.sender].releaseTime < block.timestamp, "not released yet");
+        uint256 amount = releases[msg.sender].balance;
+        releases[msg.sender].balance = 0;
+        Leader(leader).transfer(msg.sender, amount);
+    }
+
+    function getBalance(address _member) public view returns (uint256) {
+        return releases[_member].balance;
+    }
+
+    function getReleaseTime(address _member) public view returns (uint256) {
+        return releases[_member].releaseTime;
+    }
+
+
 
 }

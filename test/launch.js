@@ -201,10 +201,6 @@ describe('Basic Set up', function () {
         expect(candidate1[0]).to.equal(jose.address);
     })
 
-    it("rejects too soon vote creation", async function () {
-        await expect(SubAdam.connect(adam).createVote(cuervo.address, ethers.utils.parseEther("43324975"))).to.be.revertedWith("wait")
-    })
-
     it("rejects double vote", async function () {
         await expect(SubAdam.connect(adam).vote(jose.address, 1)).to.be.revertedWith("voted");
     })
