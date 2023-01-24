@@ -2,6 +2,7 @@
 
 pragma solidity ^0.8.9;
 
+import './EthClub7Interfaces.sol';
 import './DAOLE.sol';
 /// @title Eth Club 7
 /// @author Mr Nobody
@@ -132,14 +133,12 @@ contract Voting {
 
 ///@notice The Club contract that members interact with. Stores member details
 contract Club {
-    bool locked;
     uint8 public numberOfMembers;
     address[] public members;
     mapping(address => uint256) public clubMembers;
-
-    Leader leader;
     mapping(uint256 => bool) paid;
-
+    
+    Leader leader;
     Voting voting;
     TimeLock timeLock;
     ClubFactory clubFactory;
@@ -154,7 +153,6 @@ contract Club {
 /// @param _member The first member that will be added to the club
 /// @param _clubFactory The address of the clubFactory
     constructor(address _leaderAddress, address _voting, address _timeLock, address _clubFactory, address _member) {
-        locked = false;
         paid[block.timestamp/(4 weeks)]=true;
         leader = Leader(_leaderAddress);
         voting = Voting(_voting);
@@ -281,7 +279,6 @@ contract Leader is Daole {
     }
     mapping (address => memberDeets) members;
 
-
     event Log(string func);
 
 /// @notice Creates clubFactory and Voting contracts
@@ -321,7 +318,7 @@ contract Leader is Daole {
         if(members[_to].club != address(0)){
             _transfer(msg.sender, _to, _amount*98/100);
             _burn(msg.sender, _amount/50);
-            Performance(performance).addPerformance(_amount, members[_to].addedBy, members[_to].club);
+            IPerformance(performance).addPerformance(_amount, members[_to].addedBy, members[_to].club);
         } else {
             _transfer(msg.sender, _to, _amount);
         }
@@ -337,7 +334,7 @@ contract Leader is Daole {
             totalGrants[month] = (MAX_SUPPLY - totalSupply())*4/100;
         }
 
-        uint payment = Performance(performance).getPayment(totalGrants[month], msg.sender);
+        uint payment = IPerformance(performance).getPayment(totalGrants[month], msg.sender);
 
         _mint(msg.sender, payment);
     }
@@ -346,13 +343,7 @@ contract Leader is Daole {
 /// @param _memberAddress Member to be added
 /// @param _addedBy The club that added the member
 /// @param _club The club of the member
-    function addToAllMembers(
-        address _memberAddress, 
-        address _addedBy, 
-        address _club 
-    ) 
-        public 
-    {
+    function addToAllMembers(address _memberAddress, address _addedBy, address _club ) public {
         require(clubs[msg.sender]||msg.sender==clubFactoryAddress);
         members[_memberAddress].addedBy = _addedBy;
         members[_memberAddress].club = _club;
@@ -426,8 +417,7 @@ contract WhiteList{
 }
 
 contract Performance {
-    uint initialMonth;
-    uint public totalClubs;
+
     Leader leader;
     mapping(address => mapping(uint => uint)) public clubPerformance;
     mapping(uint => uint) public totalPerformance;
@@ -455,10 +445,18 @@ contract Performance {
         uint month = block.timestamp/(4 weeks);
 
         if(totalPerformance[month] == 0){
-            return _monthlyGrants / totalClubs;
+            return _monthlyGrants / ClubFactory(Leader(leader).clubFactoryAddress()).numberOfClubs();
         } else {
             return _monthlyGrants * clubPerformance[_club][month] / totalPerformance[month];
         }
+    }
+
+    function getPerformance(address _club, uint256 _month) public view returns (uint) {
+        return clubPerformance[_club][_month];
+    }
+
+    function getCurrentMonth() public view returns (uint) {
+        return block.timestamp/(4 weeks);
     }
 
 }
@@ -500,7 +498,7 @@ contract TimeLock {
     //withdraw function releases funds after 6 months
     function withdraw() public {
         require(releases[msg.sender].balance > 0, "no balance");
-        require(releases[msg.sender].releaseTime < block.timestamp, "not released yet");
+        require(releases[msg.sender].releaseTime < block.timestamp, "locked");
         uint256 amount = releases[msg.sender].balance;
         releases[msg.sender].balance = 0;
         Leader(leader).transfer(msg.sender, amount);
