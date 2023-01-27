@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0
+// SPDX-License-Identifier: MIT
 
 pragma solidity ^0.8.9;
 
@@ -495,12 +495,12 @@ contract TimeLock {
         Leader(leader).transferFrom(msg.sender, address(this), _amount);        
     }
 
-    //withdraw function releases funds after 6 months
+    //withdraw function releases funds linerally over 100 days, after 6 months
     function withdraw() public {
         require(releases[msg.sender].balance > 0, "no balance");
         require(releases[msg.sender].releaseTime < block.timestamp, "locked");
-        uint256 amount = releases[msg.sender].balance;
-        releases[msg.sender].balance = 0;
+        uint256 amount = releases[msg.sender].balance * (block.timestamp - releases[msg.sender].releaseTime) / (100 days);
+        releases[msg.sender].balance -= amount;
         Leader(leader).transfer(msg.sender, amount);
     }
 

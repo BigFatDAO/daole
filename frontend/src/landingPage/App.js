@@ -3,6 +3,7 @@
 import React, { Component } from 'react';
 import './App.css';
 import logo from '../Eth-Club-7-lighter.png'
+import sankey from '../Sankey2.png'
 
 export class LandingPage extends Component {
     render() {
@@ -42,7 +43,15 @@ export class LandingPage extends Component {
                 </section>
                 <section className="app-body">
                     <p className="app-intro">
-                        2% of every transaction to members is burned, returning funds to the DAO, and every month 4% of the remaining DAOLE supply is minted to the Clubs to invest, according to their performance in previous months.
+                        2% of every transaction to members is burned, returning funds to the DAO, and every month 4% of the remaining DAOLE supply is minted to the Clubs to invest, proportional to their performance in previous months.
+                    </p>
+                </section>
+                <section className="app-body">
+                    <p className="app-intro">
+                        Adoption of the ecosystem token DAOLE is encouraged by businesses accepting it at an agreed upon discounted rate, called the Accepted Rate (AR).
+                    </p>
+                    <p className="app-intro">
+                        AR is published via a smart contract and is initially set to $0.001/DAOLE. Every time the real market price of DAOLE reaches 90% of AR, AR doubles, thus establishing a new floor.
                     </p>
                 </section>
                 <section className="app-body">
@@ -61,17 +70,12 @@ export class LandingPage extends Component {
                 </section>
                 <section className="app-body">
                     <p className="app-intro">
-                        Adoption of the ecosystem token DAOLE is encouraged by businesses accepting it at an agreed upon discounted rate, called the Accepted Rate (AR).
-                    </p>
-                    <p className="app-intro">
-                        AR is published via a smart contract and is initially set to $0.001/DAOLE. Every time the real market price of DAOLE reaches 90% of AR, AR doubles, thus establishing a new floor.
-                    </p>
-                </section>
-                <section className="app-body">
-                    <p className="app-intro">
                         This is an open-source project. The source code can be found on 
                         <a href="https://github.com/BigFatDAO/daole"> GitHub</a>.
                     </p>
+                </section>
+                <section className="app-body">
+                    <img src={sankey} className="sankey" alt="Token Distribution"/>
                 </section>
                 {/* add a footer with contact details */}
                 <section className='app-footer'>

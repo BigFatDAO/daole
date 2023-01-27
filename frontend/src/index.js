@@ -1,7 +1,7 @@
 import React from "react";
 import { RouterProvider, createBrowserRouter } from "react-router-dom";
 import { createRoot } from "react-dom/client";
-import { Dapp } from "./components/Dapp";
+// import { Dapp } from "./components/Dapp";
 import { LandingPage } from "./landingPage/App";
 // We import bootstrap here, but you can remove if you want
 import "bootstrap/dist/css/bootstrap.css";
@@ -14,7 +14,7 @@ const root = createRoot(document.getElementById("root"));
 
 const router = (createBrowserRouter)([
   {path: "/", element: <LandingPage />},
-  {path: "/dapp", element: <Dapp />},
+  // {path: "/dapp", element: <Dapp />},
 ]);
 
 root.render(<RouterProvider router={router} />);

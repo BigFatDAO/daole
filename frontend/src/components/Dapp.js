@@ -5,7 +5,7 @@ import { ethers } from "ethers";
 import LeaderArtifact from "../contracts/Leader.json";
 import VotingArtifact from "../contracts/Voting.json";
 // import WhiteListArtifact from "../contracts/WhiteList.json";
-import SubDAOArtifact from "../contracts/SubDAO.json";
+import ClubArtifact from "../contracts/Club.json";
 
 import { NoWalletDetected } from "./NoWalletDetected";
 import { ConnectWallet } from "./ConnectWallet";
@@ -32,7 +32,7 @@ const ERROR_CODE_TX_REJECTED_BY_USER = 4001;
 //   1. It connects to the user's wallet
 //   2. Initializes contracts
 //   3. Polls the user balance to keep it updated.
-//   4. Connects the member to their subDAO
+//   4. Connects the member to their club
 //   5. Renders the whole application
 
 export class Dapp extends React.Component {
@@ -49,8 +49,8 @@ export class Dapp extends React.Component {
       txBeingSent: undefined,
       transactionError: undefined,
       networkError: undefined,
-      // the subDAO address
-      subDAOAddress: undefined,
+      // the club address
+      clubAddress: undefined,
       // open votes
       openVotes: undefined,
       // effective balance
@@ -135,7 +135,7 @@ export class Dapp extends React.Component {
         <div className="row">
           <div className="col-12">
             {/* if the user is not a member, we show a the NonMemberMessage */}
-            {this.state.subDAOAddress === "0x0000000000000000000000000000000000000000" && (
+            {this.state.clubAddress === "0x0000000000000000000000000000000000000000" && (
               <NonMemberMessage selectedAddress={this.state.selectedAddress} />
             )}
 
@@ -143,9 +143,9 @@ export class Dapp extends React.Component {
               This is a component that shows the member all the information about their Club
               It contains functions for all the actions a member can do
             */}
-            {this.state.subDAOAddress !== "0x0000000000000000000000000000000000000000" && (
+            {this.state.clubAddress !== "0x0000000000000000000000000000000000000000" && (
               <MemberArea
-                subAddress={this.state.subDAOAddress}
+                clubAddress={this.state.clubAddress}
                 openVotes={this.state.openVotes}
                 effectiveBalance={this.state.effectiveBalance}
               />)}
@@ -209,14 +209,14 @@ export class Dapp extends React.Component {
       this._provider.getSigner(0)
     );
 
-    // find the subDAO address
-    await this._getSubAddress();
+    // find the club address
+    await this._getClubAddress();
 
-    // if user is a member of a club, initialize the subDAO contract and the voting contract
-    if (this.state.subDAOAddress !== "0x0000000000000000000000000000000000000000") {
-      this._subDAO = new ethers.Contract(
-        this.state.subDAOAddress,
-        SubDAOArtifact.abi,
+    // if user is a member of a club, initialize the club contract and the voting contract
+    if (this.state.clubAddress !== "0x0000000000000000000000000000000000000000") {
+      this._club = new ethers.Contract(
+        this.state.clubAddress,
+        ClubArtifact.abi,
         this._provider.getSigner(0)
       );
 
@@ -254,9 +254,9 @@ export class Dapp extends React.Component {
     this._pollDataInterval = undefined;
   }
 
-  async _getSubAddress() {
-    const subDAOAddress = await this._leader.subOfMember(this.state.selectedAddress);
-    this.setState({ subDAOAddress });
+  async _getClubAddress() {
+    const clubAddress = await this._leader.clubOfMember(this.state.selectedAddress);
+    this.setState({ clubAddress });
   }
 
   // The next two methods just read from the contract and store the results
@@ -274,13 +274,13 @@ export class Dapp extends React.Component {
   }
 
   async _getOpenVotes() {
-    const openVotes = await this._voting.opens(this.state.subDAOAddress);
+    const openVotes = await this._voting.opens(this.state.clubAddress);
     this.setState({ openVotes });
   }
 
   // get effective balance
   async _getEffectiveBalance() {
-    const effectiveBalanceBigInt = await this._subDAO.effectiveBalance();
+    const effectiveBalanceBigInt = await this._club.effectiveBalance();
     const effectiveBalance = ethers.utils.formatEther(effectiveBalanceBigInt);
     this.setState({ effectiveBalance });
   }
@@ -292,12 +292,12 @@ export class Dapp extends React.Component {
 
   //get number of members
   async _getNumberOfMembers() {
-    const numberOfMembers = await this._subDAO.numberOfMembers();
+    const numberOfMembers = await this._club.numberOfMembers();
     this.setState({ numberOfMembers });
   }
 
   async _getMembers() {
-    const members = await this._subDAO.getMembers();
+    const members = await this._club.getMembers();
     this.setState({ members });
   }
 
@@ -305,7 +305,7 @@ export class Dapp extends React.Component {
 
   //suggest a member
   async _suggestMember(memberAddress, grant) {
-    this._sendTransaction( this._subDAO, "createVote", [memberAddress, grant], this._getOpenVotes);
+    this._sendTransaction( this._club, "createVote", [memberAddress, grant], this._getOpenVotes);
   }
 
   // Here is a generic try/catch function to handle errors 

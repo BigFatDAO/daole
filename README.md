@@ -1,6 +1,6 @@
 <sup>https://github.com/NomicFoundation/hardhat-boilerplate.git used as template</sup>
 
-# Eth CLub 7 - Algorithmic Agnel Investment DAO
+# Eth Club 7 - Algorithmic Agnel Investment DAO
 ## Daole
 
 Eth Club 7 is a DAO that is split into "Clubs" with 7 members each. 

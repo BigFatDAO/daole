@@ -63,10 +63,9 @@ section{
 }
 
 .app-intro {
-    /* font size between large and larger and responsive*/
     font-size: calc(10px + 1.3vmin);
     width: 80%;
-    text-align: center;
+    text-align: left;
     list-style-type: square;
     list-style-position: inside;
 }
@@ -106,5 +105,10 @@ section{
     align-items: center;
     justify-content: center;
     margin: 20px;
+}
+
+.sankey{
+  max-height: 600px;
+  color: #cc00bb;
 }
 
