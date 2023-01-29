@@ -25,7 +25,7 @@ section{
   }
 
 .app-logo {
-  height: 20vmin;
+  height: 20vh;
   pointer-events: none;
   padding: 20px;
 }
@@ -52,6 +52,16 @@ section{
     color: #61dafb;
 }
 
+.app-body-intro {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: calc(10px + 2vmin);
+    color: white;
+}
+
 .app-body {
     height: 100vh;
     display: flex;
@@ -63,11 +73,31 @@ section{
 }
 
 .app-intro {
-    font-size: calc(10px + 1.3vmin);
+    font-size: calc(10px + 1.4vmin);
+    width: 80%;
+    text-align: center;
+    list-style-type: square;
+    list-style-position: inside;
+    color: #ddf8ff;
+}
+
+.app-section-title {
+    font-size: calc(10px + 2vmin);
     width: 80%;
     text-align: left;
     list-style-type: square;
     list-style-position: inside;
+    margin-bottom: 20px;
+    color: #61fb6b;
+}
+
+.app-body-text {
+    font-size: calc(10px + 1.1vmin);
+    width: 80%;
+    text-align: left;
+    list-style-type: square;
+    list-style-position: inside;
+    color: #ddf8ff;
 }
 
 .app-footer {
@@ -108,7 +138,8 @@ section{
 }
 
 .sankey{
-  max-height: 600px;
+  max-height: 60vh;
+  max-width: 80vw;
   color: #cc00bb;
 }
 

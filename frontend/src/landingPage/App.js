@@ -5,6 +5,7 @@ import './App.css';
 import logo from '../Eth-Club-7-lighter.png'
 import sankey from '../Sankey2.png'
 
+
 export class LandingPage extends Component {
     render() {
         return (
@@ -16,57 +17,59 @@ export class LandingPage extends Component {
                     <h2 className="app-subtitle">Algorithmic Angel Investment</h2>
                     {/* add two buttons */}
                     <div className="app-buttons">
-                        <button className="app-button">Documentation</button>
-                        <button className="app-button">GitHub</button>
+                        {/* these buttons open up external links */}
+                        <button className="app-button" onClick={() => window.open("https://docs.ethclub7.one", "_blank")}>Documentation</button>
+                        <button className="app-button" onClick={() => window.open("https://github.com/BigFatDAO/daole", "_blank")}>GitHub</button>
                     </div>
                 </section>
-                <section className="app-body">
-                   
+                <section className="app-body-intro">
                     <p className="app-intro">
                         <strong>Eth Club 7 is a DAO</strong>, providing a way to invest in the millions of small businesses and startups around the world.
                     </p>
                 </section>
                 <section className="app-body">
-                    <p className="app-intro">
-                        <strong>Return on investment</strong> comes in the form of adoption, rather than asset price increases, because most small businesses don't have a coin or stock price to measure.
+                    <h1 className="app-section-title">How it works</h1>
+                    <p className="app-body-text">
+                        The DAO is made up of businesses and split into 7-member Clubs, each responsible for investing part of the ecosystem's token, DAOLE, as grants to onboard new businesses.
+                    </p>
+                    <p className="app-body-text">
+                        A Club's performance is measured by the transaction volume of the businesses it has added. Better performing Clubs are allocated more funds for future rounds.
+                    </p>
+                    <p className="app-body-text">
+                        2% of every transaction is burned, returning funds to the DAO, and every month 4% of the remaining DAOLE supply is minted to Clubs to invest, proportional to their performance.
+                    </p>
+                </section>
+
+                <section className="app-body">
+                    <h1 className="app-section-title">Why DAOLE?</h1>
+                    <p className="app-body-text">
+                        Customer adoption is encouraged by businesses accepting DAOLE at a discounted rate, called the Accepted Rate (AR).
+                    </p>
+                    <p className="app-body-text">
+                        AR is published via a smart contract and initially set to $0.001/DAOLE. When the market price reaches 90% of AR, AR doubles, establishing a new floor.
+                    </p>
+                    <p className="app-body-text">
+                        This creates a virtuous cycle of adoption and price appreciation, where businesses are incentivized to accept DAOLE and customers are incentivized to use it.
                     </p>
                 </section>
                 <section className="app-body">
-                    <p className="app-intro">
-                        Instead of the entire DAO voting on investments together, the DAO is made up of 7-member Clubs, each responsible for investing their portion of the ecosystem's ERC-20 token, DAOLE, as grants to onboard new businesses.
+                    <h1 className="app-section-title">Why Eth Club 7?</h1>
+                    <p className="app-body-text">
+                        Allocating funds using small investment clubs and a performance-based algorithm provides several benefits over token-based voting:
                     </p>
-                </section>
-                <section className="app-body">
-                    <p className="app-intro">
-                        A Club's performance is measured by the transaction volume of the businesses they have previously added, and better performing Clubs are allocated more funds to invest in future rounds.
-                    </p>
-                </section>
-                <section className="app-body">
-                    <p className="app-intro">
-                        2% of every transaction to members is burned, returning funds to the DAO, and every month 4% of the remaining DAOLE supply is minted to the Clubs to invest, proportional to their performance in previous months.
-                    </p>
-                </section>
-                <section className="app-body">
-                    <p className="app-intro">
-                        Adoption of the ecosystem token DAOLE is encouraged by businesses accepting it at an agreed upon discounted rate, called the Accepted Rate (AR).
-                    </p>
-                    <p className="app-intro">
-                        AR is published via a smart contract and is initially set to $0.001/DAOLE. Every time the real market price of DAOLE reaches 90% of AR, AR doubles, thus establishing a new floor.
-                    </p>
-                </section>
-                <section className="app-body">
-                    <p className="app-intro">
-                        Allocating funds using small investment clubs and a performance-based algorithm provides several benefits over the standard DAO voting process:
-                    </p>
-                    <p className="app-intro">
+                    <div className="app-body-text">
                         <ul>
-                            <li>It's much faster and more efficient</li>
-                            <li>Hundreds of proposals can be implimented simultaneously</li>
-                            <li>Investment performance is measured and Clubs are held accountable by the protocol</li>
-                            <li>Larger token holders, who may not make better investment decisions, do not have extra power</li>
-                            <li>In many crypto projects, the largest token holders are centralised exchanges</li>
+                            <li>Hundreds of proposals can be implemented simultaneously</li>
+                            <li>Performance is measured and Clubs are held accountable by the protocol</li>
+                            <li>Larger token holders, who are often exchanges, do not have extra power, reducing centralization</li>
+                            <li>It's personal an fun: An entire Club can meet to discuss investments</li>
                          </ul>
-                    </p>
+                    </div>
+                </section>
+
+                <section className="app-body">
+                    <h1 className="app-section-title">Tokenomics</h1>
+                        <img src={sankey} className="sankey" alt="Eth Club 7 Daole Tokenomics" />
                 </section>
                 <section className="app-body">
                     <p className="app-intro">
@@ -74,16 +77,12 @@ export class LandingPage extends Component {
                         <a href="https://github.com/BigFatDAO/daole"> GitHub</a>.
                     </p>
                 </section>
-                <section className="app-body">
-                    <img src={sankey} className="sankey" alt="Token Distribution"/>
-                </section>
-                {/* add a footer with contact details */}
                 <section className='app-footer'>
                     <h3>Contact</h3>
-                    <p className="app-intro">
+                    <p className="app-body-text">
                         Email: <a href="mailto:daole42069@tutanota.com">Eth Club 7</a>
                     </p>
-                    <p className="app-intro">
+                    <p className="app-body-text">
                         Twitter: <a href="https://twitter.com/DaoleBillYall">@DaoleBillYall</a>
                     </p>
                 </section>

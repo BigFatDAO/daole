@@ -255,7 +255,7 @@ contract ClubFactory {
         Club club = new Club(leader, Leader(leader).votingAddress(),timeLock, address(this), _member1);
         Leader(leader).finishCreation(_member1, address(club), _addedBy);
         if(msg.sender == whiteList) {
-            Leader(leader).transfer(address(club), 1125e21);
+            Leader(leader).transfer(address(club), 2250e21);
             Leader(leader).increaseAllowance(timeLock, 1125e21);
             TimeLock(timeLock).deposit(_member1, 1125e21);
         }
@@ -291,7 +291,7 @@ contract Leader is Daole {
         clubFactoryAddress = address(clubFactory);
         Performance perf = new Performance(address(this));
         performance = address(perf);
-        _mint(clubFactoryAddress,225e24);
+        _mint(clubFactoryAddress,3375e23);
     }
 
     modifier onlyClubs{

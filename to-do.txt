@@ -11,25 +11,8 @@ interfaces -> add and check all getters names (Remove the "Get")
 
 add all the interfaces into the daosystem
 
+get the whitelist time bound
 
-bradleysandilands@192 eth-club-7 % npx hardhat run --network localhost scripts/deploy.js    
-TimeLock deployed to: 0x5FbDB2315678afecb367f032d93F642f64180aa3
-TimeLock gas used: 715647
-WhiteList deployed to: 0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512
-WhiteList gas used: 408375
-WhiteList contract size: 3092
-Member 1 address: 0x70997970C51812dc3A010C7d01b50e0d17dc79C8
-Leader deployed to: 0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6
-Leader contract size: 19346
-Leader gas used: 7101519
-are we here?
-Clubs created
-bradleysandilands@192 eth-club-7 % 
+add the yield farm
 
-  Contract call:       WhiteList#createClub
-  Transaction:         0xbb707bd5dba162e9a6144e459518d51419f5ee3aabaf2b909c468a567a6df841
-  From:                0x976ea74026e726554db657fa54763abd0c3a0aa9
-  To:                  0xe7f1725e7734ce288f8367e1bb143e90bb3f0512
-  Value:               0 ETH
-  Gas used:            1459719 of 1505335
-  Block #17:           0x97ece0d5fd3fb4b2999a9c3c540d33fae7cb3ecc7aa5b356ea979a6661aa3153
+change favico and logos on top of browser
