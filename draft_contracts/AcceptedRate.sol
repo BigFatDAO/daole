@@ -1,12 +1,15 @@
-// SPDX-License-Identifier: GPL-3.0
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.7;
 
-pragma solidity ^0.8.0;
+import './PriceConsumerV3.sol';
 
-contract AcceptedRate {
+
+contract AcceptedRate is PriceConsumerV3 {
     uint256 public acceptedRate;
     uint256 public lastUpdated;
 
 // use a chainlink oracle to get price of ONE token in USD
+// *handled in PriceConsumerV3.sol
 
 // use the uniswapV2 router to get the price of DAOLE in ONE
 
