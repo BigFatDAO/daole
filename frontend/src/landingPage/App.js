@@ -62,7 +62,7 @@ export class LandingPage extends Component {
                             <li>Hundreds of proposals can be implemented simultaneously</li>
                             <li>Performance is measured and Clubs are held accountable by the protocol</li>
                             <li>Larger token holders, who are often exchanges, do not have extra power, reducing centralization</li>
-                            <li>It's personal an fun: An entire Club can meet to discuss investments</li>
+                            <li>It's personal and fun: An entire Club can meet in person or online to discuss investments</li>
                          </ul>
                     </div>
                 </section>
