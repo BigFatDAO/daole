@@ -1,4 +1,5 @@
 //test file
+const { days } = require("@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time/duration");
 const { expect, assert } = require("chai");
 const chai = require('chai');
 const chaiAlmost = require('chai-almost');
@@ -7,7 +8,10 @@ chai.use(chaiAlmost(100));
 const { ethers } = require("hardhat");
 const twoWeeks = 60*60*24*14
 const oneMonth = 60*60*24*28
+const hundredDays = 60*60*24*100
 const sixMonths = 60*60*24*7*26
+const memberMint = 1125000
+const clubMint = 2250000
 
 before(async function () {
     [god, adam, eve, moses, steven, mary, jose, cuervo, mrT, lilTimmy, bigDog, newGuy, newGuy2, uncleG, dummy, dummy2, dummy3] = await ethers.getSigners();
@@ -49,8 +53,6 @@ before(async function () {
     await whiteList.connect(moses).createClub();
     await whiteList.connect(steven).createClub();
     await whiteList.connect(mary).createClub();
-
-    const clubs = await ClubFactory.numberOfClubs()
 
     clubA = await leader.clubOfMember(adam.address)
     ClubAdam = await hre.ethers.getContractAt("Club", clubA);
@@ -120,14 +122,13 @@ describe('Basic Set up', function () {
     
     it("check totalSupply", async function () {
         supply = await leader.totalSupply()
-        clubMint = 1125000
-        const mint = clubMint*200+5000000000
+        const mint = 5000000000+(memberMint+clubMint)*100
         console.log(mint)
         expect(supply).to.equal(ethers.utils.parseEther(mint.toString()));
     });
 
     it("clubs effective balances are 1125e21", async function () {
-        expect(await leader.balanceOf(clubA)).to.equal(ethers.utils.parseEther("1125000"))
+        expect(await leader.balanceOf(clubA)).to.equal(ethers.utils.parseEther(clubMint.toString()))
     })
 
     it("check club numbers", async function () {
@@ -136,7 +137,7 @@ describe('Basic Set up', function () {
     });
 
     it("checks adams timelock", async function () {
-        expect(await timeLock.getBalance(adam.address)).to.equal(ethers.utils.parseEther("1125000"))
+        expect(await timeLock.getBalance(adam.address)).to.equal(ethers.utils.parseEther(memberMint.toString()))
         const releaseTime = await timeLock.getReleaseTime(adam.address);
         const now = await ethers.provider.getBlock("latest");
         const sixMonthsMore = now.timestamp + sixMonths;
@@ -421,18 +422,37 @@ describe('Basic Set up', function () {
         expect((await leader.balanceOf(lilTimmy.address))/10e10).to.almost.equal(Number((balanceAmount)/BigInt(10e10)))
     })
 
-    it("big dog can withdraw", async function () {
-        clubBal = BigInt(await leader.balanceOf(clubA))
+    it("test big dog linear withdraw", async function () {
         bigDogBal = BigInt(await leader.balanceOf(bigDog.address))
         bdGrant = BigInt(await timeLock.getBalance(bigDog.address))
-        bdBurn = bdGrant/BigInt(50)
+
         await network.provider.send("evm_increaseTime", [sixMonths]);
         await network.provider.send("evm_mine");
+        //get current timestamp
+
+        const releaseTime = await timeLock.getReleaseTime(bigDog.address);
 
         await timeLock.connect(bigDog).withdraw()
-        expect(await leader.balanceOf(clubA)).to.equal(clubBal)
-        expect((await leader.balanceOf(bigDog.address))/1e10).to.almost.equal(Number(bigDogBal+bdGrant-bdBurn)/1e10)
+        const current = await ethers.provider.getBlock("latest");
+        const now = current.timestamp;
+        const releaseAmount = BigInt(Number(bdGrant) * (now-releaseTime) / hundredDays)
+        const bdBurn = releaseAmount/BigInt(50)
+
+        //have set loose almost equal because dunno if the block timestamps add up
+        expect(await leader.balanceOf(bigDog.address)).to.be.closeTo((bigDogBal+releaseAmount-bdBurn),1e10)
+        //double check TL balance = bdgrant - releaseAmount
+        expect(await timeLock.getBalance(bigDog.address)).to.be.closeTo((bdGrant-releaseAmount),1e10)
+
     })
+
+    it("test big dog withdraw all", async function () {
+        await network.provider.send("evm_increaseTime", [hundredDays]);
+        await network.provider.send("evm_mine");
+        await timeLock.connect(bigDog).withdraw()
+        expect(await leader.balanceOf(bigDog.address)).to.equal(bigDogBal+bdGrant*BigInt(49)/BigInt(50))
+        expect(await timeLock.getBalance(bigDog.address)).to.equal(0)
+    })
+
 
     it("cant withdraw", async function () {
         await expect(timeLock.connect(bigDog).withdraw()).to.be.revertedWith("no balance")

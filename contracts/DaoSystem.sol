@@ -499,7 +499,10 @@ contract TimeLock {
     function withdraw() public {
         require(releases[msg.sender].balance > 0, "no balance");
         require(releases[msg.sender].releaseTime < block.timestamp, "locked");
+        //calculate amount to release
         uint256 amount = releases[msg.sender].balance * (block.timestamp - releases[msg.sender].releaseTime) / (100 days);
+        //update balance
+        if(amount > releases[msg.sender].balance) amount = releases[msg.sender].balance;
         releases[msg.sender].balance -= amount;
         Leader(leader).transfer(msg.sender, amount);
     }

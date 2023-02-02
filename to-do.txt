@@ -15,4 +15,3 @@ get the whitelist time bound
 
 add the yield farm
 
-change favico and logos on top of browser
