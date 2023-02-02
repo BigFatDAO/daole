@@ -11,7 +11,9 @@ import '@uniswap/v2-periphery/contracts/libraries/UniswapV2Library.sol';
 contract DaoleONEOracle {
     using FixedPoint for *;
 
-    uint public constant PERIOD = 10;
+    // period that the price average is over
+    // also sets the minimum amount of time between updates of this and the AcceptedRate contract - set to 24 hours to stabilize the accepted rate
+    uint public constant PERIOD = 60;
 
     IUniswapV2Pair immutable pair;
     address public immutable token0;
