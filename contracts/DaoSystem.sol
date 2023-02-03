@@ -48,8 +48,6 @@ contract Voting {
 /// @param _suggestedBy The member that suggested this candidate
 
     function createVote(address _candidate, uint _grantAmount, address _suggestedBy) public onlyClubs {
-        require(_candidate != address(leader), "no leader");
-        require(!leader.isClub(_candidate),"no clubs");
         require(leader.clubOfMember(_candidate)==address(0),"is member");
         require(!candidates[_candidate].open, "already been suggested");
         // some of these values need to be set to 0 or false because they may have already been a candidate

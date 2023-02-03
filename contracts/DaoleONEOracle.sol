@@ -1,6 +1,6 @@
 //SPDX-License-Identifier: MIT
 
-//this will probably anoyingly display a warning about the version of solidity being used, you must use this version because it needs to have overflow/underflow to update the price properly. 
+//You must use this version of solidity because it needs to have overflow/underflow to update the price properly. 
 pragma solidity =0.6.6;
 
 import '@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol';
