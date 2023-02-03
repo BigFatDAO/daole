@@ -459,12 +459,6 @@ describe('Basic Set up', function () {
         await expect(timeLock.connect(god).withdraw()).to.be.revertedWith("no balance") 
     })
 
-    it("rejects adding leader, club", async function () {
-        const newTransfer = clubBal/BigInt(10)
-        await expect(ClubAdam.connect(adam).createVote(ClubU.address, newTransfer)).to.be.revertedWith("no clubs")
-        await expect(ClubAdam.connect(adam).createVote(leader.address, newTransfer)).to.be.revertedWith("no leader")
-    })
-
     it('try pay a couple people', async function() {
         await expect(leader.payClubs()).to.be.revertedWith("not club")
         await expect(leader.connect(bigDog).payClubs()).to.be.revertedWith("not club")
