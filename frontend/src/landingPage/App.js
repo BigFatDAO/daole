@@ -4,7 +4,9 @@ import React, { Component } from 'react';
 import './App.css';
 import logo from '../Eth-Club-7-lighter.png'
 import sankey from '../Sankey2.png'
-
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faEnvelope} from '@fortawesome/free-solid-svg-icons'
+import { faTwitter, faDiscord, faGithub } from '@fortawesome/free-brands-svg-icons'
 
 export class LandingPage extends Component {
     render() {
@@ -79,12 +81,28 @@ export class LandingPage extends Component {
                 </section>
                 <section className='app-footer'>
                     <h3>Contact</h3>
-                    <p className="app-body-text">
-                        Email: <a href="mailto:daole42069@tutanota.com">Eth Club 7</a>
-                    </p>
-                    <p className="app-body-text">
-                        Twitter: <a href="https://twitter.com/DaoleBillYall">@DaoleBillYall</a>
-                    </p>
+                    <div className="app-contacts">
+                        <div className="app-contact">
+                            <a href="mailto:daole42069@tutanota.com">
+                                <FontAwesomeIcon icon={faEnvelope} size="1x" />
+                            </a>
+                        </div>
+                        <div className="app-contact">
+                            <a href="https://twitter.com/DaoleBillYall">
+                                <FontAwesomeIcon icon={faTwitter} size="1x" />
+                            </a>
+                        </div>
+                        <div className="app-contact">
+                            <a href="https://discord.gg/pp4h2SHZf9">
+                                <FontAwesomeIcon icon={faDiscord} size="1x" />
+                            </a>
+                        </div>
+                        <div className="app-contact">
+                            <a href="https://github.com/BigFatDAO/daole">
+                                <FontAwesomeIcon icon={faGithub} size="1x" />
+                            </a>
+                        </div>
+                    </div>
                 </section>
 
         </div>

@@ -107,7 +107,7 @@ section{
     align-items: center;
     justify-content: center;
     font-size: calc(10px + 2vmin);
-    color: white;
+    color: #61fb6b;
 }
 
 .app-link {
@@ -131,6 +131,21 @@ section{
     color: #61dafb;
     font-size: 20px;
     font-weight: bold;
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    margin: 20px;
+}
+
+.app-contacts{
+    display: flex;
+    flex-direction: row;
+    justify-content: space-around;
+    max-width: fit-content;
+    flex-wrap: wrap;
+}
+
+.app-contact{
     cursor: pointer;
     align-items: center;
     justify-content: center;
