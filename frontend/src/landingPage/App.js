@@ -32,26 +32,29 @@ export class LandingPage extends Component {
                 <section className="app-body">
                     <h1 className="app-section-title">How it works</h1>
                     <p className="app-body-text">
-                        The DAO is made up of businesses and split into 7-member Clubs, each responsible for investing part of the ecosystem's token, DAOLE, as grants to onboard new businesses.
+                        The DAO is made up of 7-member Clubs. Each Club is allocated funds monthly to invest as grants to onboard new businesses.
                     </p>
                     <p className="app-body-text">
-                        A Club's performance is measured by the transaction volume of the businesses it has added. Better performing Clubs are allocated more funds for future rounds.
+                        The amount of funds allocated to each Club is based on the performance of their previous investments.
                     </p>
                     <p className="app-body-text">
-                        2% of every transaction is burned, returning funds to the DAO, and every month 4% of the remaining DAOLE supply is minted to Clubs to invest, proportional to their performance.
+                        The funds allocated are the ecosystems ERC-20 token, DAOLE, which participating businesses agree to accept for transactions upon receiving a grant.
+                    </p>
+                    <p className="app-body-text">
+                        The return on investment for the DAO comes from the adoption of DAOLE creating an upward pressure on price, and a 2% fee on every transaction to a member.
                     </p>
                 </section>
 
                 <section className="app-body">
                     <h1 className="app-section-title">Why DAOLE?</h1>
                     <p className="app-body-text">
-                        Customer adoption is encouraged by businesses accepting DAOLE at a discounted rate, called the Accepted Rate (AR).
+                        Customer adoption is encouraged by businesses accepting DAOLE at a 30% discount compared to fiat.
                     </p>
                     <p className="app-body-text">
-                        AR is published via a smart contract and initially set to $0.001/DAOLE. When the market price reaches 90% of AR, AR doubles, establishing a new floor.
+                        Businesses benefit by upwards price pressure from this customer adoption, and customers benefit by receiving the discount.
                     </p>
                     <p className="app-body-text">
-                        This creates a virtuous cycle of adoption and price appreciation, where businesses are incentivized to accept DAOLE and customers are incentivized to use it.
+                        This creates a win-win cycle of adoption and price appreciation, where businesses are incentivized to accept DAOLE and customers are incentivized to use it.
                     </p>
                 </section>
                 <section className="app-body">
