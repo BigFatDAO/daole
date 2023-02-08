@@ -78,8 +78,8 @@ contract Voting {
         require(!candidates[_candidate].vote[_voter],"voted");
         require(_vote == 1 || _vote == -1, "vote not right");
         require(candidates[_candidate].open, "not open");
-        candidates[_candidate].votes += _vote;
         candidates[_candidate].vote[_voter]=true;
+        candidates[_candidate].votes += _vote;
 
         emit Voted(_voter, _candidate, _vote, block.timestamp);
     }

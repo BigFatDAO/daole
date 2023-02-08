@@ -3,8 +3,13 @@ import { RouterProvider, createBrowserRouter } from "react-router-dom";
 import { createRoot } from "react-dom/client";
 // import { Dapp } from "./components/Dapp";
 import { LandingPage } from "./landingPage/App";
-// We import bootstrap here, but you can remove if you want
 import "bootstrap/dist/css/bootstrap.css";
+//importing fonts for Material UI
+import '@fontsource/roboto/300.css';
+import '@fontsource/roboto/400.css';
+import '@fontsource/roboto/500.css';
+import '@fontsource/roboto/700.css';
+
 
 // create a root
 const root = createRoot(document.getElementById("root"));

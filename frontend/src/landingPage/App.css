@@ -7,7 +7,7 @@ section{
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    scroll-snap-align: start;
+
 }
 
 .app {
@@ -70,6 +70,20 @@ section{
     justify-content: center;
     font-size: calc(10px + 2vmin);
     color: white;
+    scroll-snap-align: start;
+}
+
+.app-timeline{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: calc(10px + 2vmin);
+    color: white;
+    min-height: 100vh;
+    height: fit-content;
+    scroll-snap-align: start;
+
 }
 
 .app-intro {
@@ -145,6 +159,10 @@ section{
     flex-wrap: wrap;
 }
 
+.nothing{
+    color: #358b3b;
+}
+
 .app-contact{
     cursor: pointer;
     align-items: center;
@@ -153,8 +171,64 @@ section{
 }
 
 .sankey{
-  max-height: 60vh;
+  height: 60vh;
   max-width: 80vw;
-  color: #cc00bb;
 }
 
+/* here is the css for my flowchart, which has a date in a cirlce on te left and a text on the right, connected with a line */
+.flowchart{
+    display: flex;
+    flex-direction: row;
+    justify-content: space-around;
+    max-width: fit-content;
+    flex-wrap: wrap;
+}
+
+.flowchart-item{
+    display: flex;
+    flex-direction: row;
+    justify-content: space-around;
+    width: 100%;
+    flex-wrap: wrap;
+    margin: 20px;
+}
+
+.flowchart-item-date{
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+    max-width: fit-content;
+}
+
+.flowchart-item-date-circle{
+    display: flex;
+    border-radius: 50%;
+    border: 2px solid #61fb6b;
+    background-color: #282c34;
+    color: #61dafb;
+    font-size: 15px;
+    font-weight: bold;
+    align-items: center;
+    justify-content: center;
+    width: 70px;
+    height: 70px;
+}
+
+.flowchart-item-description{
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+    flex-wrap: wrap;
+    margin: 20px;
+    border-radius: 10px;
+    border: 2px solid #61fb6b;
+    background-color: #282c34;
+    color: #61dafb;
+    font-size: 20px;
+    font-weight: bold;
+    align-items: center;
+    justify-content: center;
+    min-width: 200px;
+    width: 60%;
+    height: 100px;
+}
