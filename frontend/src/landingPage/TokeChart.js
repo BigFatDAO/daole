@@ -1,5 +1,5 @@
 import React from "react";
-import { PieChart, Pie, Tooltip, LabelList } from "recharts";
+import { PieChart, Pie, Tooltip} from "recharts";
 
 const data01 = [
   { name: "Liquidity", value: 3500, fill: "#61d9fa" },
@@ -60,12 +60,6 @@ function CustomTooltip({ payload, active }) {
 
   return null;
 }
-
-const customLabel = ({ percent }) => {
-  if (percent < 1000) return percent + "M";
-  // return value / 1000 rounded to 1dp + "B";
-  else return Math.round(percent / 100) / 10 + "B";
-};
 
 const MyComponent = () => {
   return (
