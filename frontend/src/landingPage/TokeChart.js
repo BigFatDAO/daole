@@ -20,7 +20,7 @@ function getIntroOfPage(label) {
     case "Liquidity":
       return "500M at launch, 3B in yield farm";
     case "Treasury":
-      return "500M pre-launch team: Locked 6 months + 100 days, 1B controlled DAO after launch";
+      return "500M pre-launch team: Locked 6 months + 100 days. 1B controlled DAO after launch";
     case "Grants":
       return "300M to founding Clubs, 4.7B released over time to Clubs on a performance basis";
     case "Yield Farm":
@@ -42,7 +42,7 @@ function getIntroOfPage(label) {
 
 function CustomTooltip({ payload, active }) {
   if (active) {
-    let labelNumber = "bbb";
+    let labelNumber = "";
 
     if (payload[0].value < 1000) {
       labelNumber = payload[0].value + "M";
@@ -113,11 +113,10 @@ function MobileComponent() {
           dataKey="value"
           cx="50%"
           cy="50%"
-          paddingAngle={5}
           outerRadius={50}
           stroke="#282c34"
         />
-        <Tooltip />
+        <Tooltip content={<CustomTooltip />} />
         <Pie
           data={data02}
           dataKey="value"
@@ -125,10 +124,11 @@ function MobileComponent() {
           cy="50%"
           innerRadius={60}
           outerRadius={70}
-          paddingAngle={5}
+          paddingAngle={1}
           stroke="#282c34"
           label
         />
+        <Tooltip content={<CustomTooltip />} />
       </PieChart>
       <p className="app-body-text-center">Click for details.</p>
     </div>
