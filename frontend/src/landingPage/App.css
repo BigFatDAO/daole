@@ -44,7 +44,7 @@ section{
 .app-title{
     font-size: 50px;
     font-weight: bold;
-    color: #61dafb;
+    color: #61d9fa;
 }
 
 .app-subtitle{
@@ -71,7 +71,6 @@ section{
     align-items: center;
     justify-content: center;
     font-size: calc(10px + 2vmin);
-    color: white;
     scroll-snap-align: start;
 }
 
@@ -81,11 +80,20 @@ section{
     align-items: center;
     justify-content: center;
     font-size: calc(10px + 2vmin);
-    color: white;
     min-height: 100vh;
     height: fit-content;
     scroll-snap-align: start;
+}
 
+.app-tokenomics{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: calc(10px + 2vmin);
+    min-height: 100vh;
+    height: fit-content;
+    scroll-snap-align: start;
 }
 
 .app-intro {
@@ -116,8 +124,18 @@ section{
     color: #ddf8ff;
 }
 
+.app-body-text-center{
+    font-size: calc(10px + 1.1vmin);
+    width: 80%;
+    text-align: center;
+    list-style-type: square;
+    list-style-position: inside;
+    color: #ddf8ff;
+}
+
 .app-footer {
     height: 20vh;
+    margin-top: 15px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -154,6 +172,16 @@ section{
     margin: 20px;
 }
 
+.app-contact-title{
+    font-size: calc(10px + 2vmin);
+    width: 80%;
+    text-align: center;
+    list-style-type: square;
+    list-style-position: inside;
+    margin-bottom: 10px;
+    color: #61fb6b;
+}
+
 .app-contacts{
     display: flex;
     flex-direction: row;
@@ -163,7 +191,9 @@ section{
 }
 
 .nothing{
-    color: #358b3b;
+    color: #c314ae;
+    background: #01b00d;
+    color: #00b1e2;
 }
 
 .app-contact{
@@ -174,64 +204,29 @@ section{
 }
 
 .sankey{
-  height: 60vh;
+  max-height: 60vh;
   max-width: 80vw;
 }
 
-/* here is the css for my flowchart, which has a date in a cirlce on te left and a text on the right, connected with a line */
-.flowchart{
+.pie-container{
     display: flex;
     flex-direction: row;
-    justify-content: space-around;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
     max-width: fit-content;
     flex-wrap: wrap;
+    font-size: medium;
 }
 
-.flowchart-item{
-    display: flex;
-    flex-direction: row;
-    justify-content: space-around;
-    width: 100%;
-    flex-wrap: wrap;
-    margin: 20px;
-}
-
-.flowchart-item-date{
-    display: flex;
-    flex-direction: column;
-    justify-content: space-around;
-    max-width: fit-content;
-}
-
-.flowchart-item-date-circle{
-    display: flex;
-    border-radius: 50%;
-    border: 2px solid #61fb6b;
+.custom-tooltip{
     background-color: #282c34;
     color: #61dafb;
-    font-size: 15px;
-    font-weight: bold;
-    align-items: center;
-    justify-content: center;
-    width: 70px;
-    height: 70px;
+    border: 1px solid #61fb6b;
+    border-radius: 5px;
+    padding: 10px;
+    font-size: 14px;
 }
 
-.flowchart-item-description{
-    display: flex;
-    flex-direction: column;
-    justify-content: space-around;
-    flex-wrap: wrap;
-    margin: 20px;
-    border-radius: 10px;
-    border: 2px solid #61fb6b;
-    background-color: #282c34;
-    color: #61dafb;
-    font-size: 20px;
-    font-weight: bold;
-    align-items: center;
-    justify-content: center;
-    min-width: 200px;
-    width: 60%;
-    height: 100px;
-}
+
+

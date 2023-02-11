@@ -3,8 +3,8 @@
 import React, { Component } from "react";
 import "./App.css";
 import TimelineMUI from "./TimelineMUI";
+import Tokenomics from "./Tokenomics";
 import logo from "../Eth-Club-7-lighter.png";
-import sankey from "../Sankey2.png";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEnvelope } from "@fortawesome/free-solid-svg-icons";
 import {
@@ -43,8 +43,7 @@ export class LandingPage extends Component {
         </section>
         <section className="app-body-intro">
           <p className="app-intro">
-            <strong>Eth Club 7 is a DAO</strong>, providing a way to invest in
-            the millions of small businesses and startups around the world.
+            <strong>Eth Club 7 is a DAO</strong>, providing a way to invest in small businesses and startups around the world.
           </p>
         </section>
         <section className="app-body">
@@ -117,16 +116,13 @@ export class LandingPage extends Component {
           </div>
         </section>
 
-        <section className="app-body">
+        <section className="app-tokenomics">
           <h1 className="app-section-title">Tokenomics</h1>
-          <img
-            src={sankey}
-            className="sankey"
-            alt="Eth Club 7 Daole Tokenomics"
-          />
+          <Tokenomics />
         </section>
 
         <section className="app-footer">
+          <h1 className="app-contact-title">Contact</h1>
           <p className="app-intro">
             This is an open-source project. Join the conversation below:
           </p>
