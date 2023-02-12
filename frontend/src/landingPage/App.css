@@ -192,7 +192,7 @@ section{
 
 .nothing{
     color: #c314ae;
-    background: #01b00d;
+    background: #a7bea9;
     color: #00b1e2;
 }
 
@@ -226,6 +226,7 @@ section{
     border-radius: 5px;
     padding: 10px;
     font-size: 14px;
+    max-width: 300px;
 }
 
 

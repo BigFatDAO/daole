@@ -13,7 +13,7 @@ export default function TimelineItemComponent(props) {
       <TimelineOppositeContent
         sx={{ m: "auto 0"}}
         variant="body2"
-        // color="#358b3b"
+        color="#a7bea9"
         fontSize={"calc(9px + 1.1vmin)"}
         fontWeight={1}
       >

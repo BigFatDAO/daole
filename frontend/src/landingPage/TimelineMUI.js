@@ -14,7 +14,7 @@ import Diversity1Icon from '@mui/icons-material/Diversity1';
 
 export default function CustomizedTimeline() {
   return (
-    <Timeline  sx={{
+    <Timeline sx={{
       [`& .${timelineOppositeContentClasses.root}`]: {
         flex: 0.2,
       },
