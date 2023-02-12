@@ -113,11 +113,10 @@ function MobileComponent() {
           dataKey="value"
           cx="50%"
           cy="50%"
-          paddingAngle={5}
           outerRadius={50}
           stroke="#282c34"
         />
-        <Tooltip />
+        <Tooltip content={<CustomTooltip />} />
         <Pie
           data={data02}
           dataKey="value"
@@ -125,10 +124,11 @@ function MobileComponent() {
           cy="50%"
           innerRadius={60}
           outerRadius={70}
-          paddingAngle={5}
+          paddingAngle={1}
           stroke="#282c34"
           label
         />
+        <Tooltip content={<CustomTooltip />} />
       </PieChart>
       <p className="app-body-text-center">Click for details.</p>
     </div>
