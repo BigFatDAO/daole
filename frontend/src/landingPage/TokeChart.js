@@ -20,7 +20,7 @@ function getIntroOfPage(label) {
     case "Liquidity":
       return "500M at launch, 3B in yield farm";
     case "Treasury":
-      return "500M pre-launch team: Locked 6 months + 100 days, 1B controlled DAO after launch";
+      return "500M pre-launch team: Locked 6 months + 100 days. 1B controlled DAO after launch";
     case "Grants":
       return "300M to founding Clubs, 4.7B released over time to Clubs on a performance basis";
     case "Yield Farm":
@@ -42,7 +42,7 @@ function getIntroOfPage(label) {
 
 function CustomTooltip({ payload, active }) {
   if (active) {
-    let labelNumber = "bbb";
+    let labelNumber = "";
 
     if (payload[0].value < 1000) {
       labelNumber = payload[0].value + "M";
