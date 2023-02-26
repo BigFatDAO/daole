@@ -1,4 +1,4 @@
-//this component contains the subdao functions
+//this component contains the Club functions
 
 import React from "react";
 

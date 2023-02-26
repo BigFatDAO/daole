@@ -1,10 +1,14 @@
-Double check last changes
+Big jobs:
+- Set up the initial flow: Auction to LP and staking contract, so this can launch before the DAO starts
+- Test yield farm
+- Governance
+- dApp frontend
 
-Redo tests
+
 
 Change imports to interfaces
 
-Add a name for the clubs
+Add names for the Clubs and members
 
 interfaces -> add and check all getters names (Remove the "Get")
 
@@ -13,4 +17,10 @@ add all the interfaces into the daosystem
 get the whitelist time bound
 
 add the yield farm
+
+Voting contract:
+    - change to proposal which could be add or remove member, or change name
+
+
+
 

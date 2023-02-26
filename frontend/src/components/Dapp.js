@@ -24,6 +24,8 @@ const leaderAddress = LeaderAddress.Address;
 // const whiteListAddress = WhiteListAddress.Address;
 const votingAddress = VotingAddress.Address;
 
+const cl = console.log;
+
 
 const HARDHAT_NETWORK_ID = '1337';
 const ERROR_CODE_TX_REJECTED_BY_USER = 4001;
@@ -226,9 +228,9 @@ export class Dapp extends React.Component {
         this._provider.getSigner(0)
       );
 
-      await this._getOpenVotes();
-      await this._getEffectiveBalance();
-      await this._getNumberOfMembers();
+      // await this._getOpenVotes();
+      // await this._getClubBalance();
+      // await this._getNumberOfMembers();
     }
 
     // 
@@ -256,6 +258,7 @@ export class Dapp extends React.Component {
 
   async _getClubAddress() {
     const clubAddress = await this._leader.clubOfMember(this.state.selectedAddress);
+    cl(clubAddress + typeof(clubAddress))
     this.setState({ clubAddress });
   }
 
@@ -279,15 +282,16 @@ export class Dapp extends React.Component {
   }
 
   // get effective balance
-  async _getEffectiveBalance() {
-    const effectiveBalanceBigInt = await this._club.effectiveBalance();
+  async _getClubBalance() {
+    const effectiveBalanceBigInt = await this._leader.balanceOf(this.state.clubAddress);
     const effectiveBalance = ethers.utils.formatEther(effectiveBalanceBigInt);
     this.setState({ effectiveBalance });
+    cl(effectiveBalance)
   }
 
   //transfer tokens
   async _transferTokens(to, amount) {
-    this._sendTransaction( this._leader, "transfer", [to, amount], this._updateBalance);
+    await this._sendTransaction( this._leader, "transfer", [to, amount], this._updateBalance);
   }
 
   //get number of members

@@ -9,9 +9,12 @@ import './DAOLE.sol';
 /// @notice Creates a system of DAOs to allocate grants
 
 contract Voting {
-    /// @notice This contract stores the candidate info and executes voting
+    /// @notice This contract stores the proposal info and executes voting
+    /// @dev functions to add/modify: addMember, createClub, removeMember, addDescription
     
-    struct candidate {
+    //change this struct to a proposal struct, to allow for all functionality
+    struct proposal {
+        uint proposalType; // 1 = addMember, 2 = createClub, 3 = removeMember, 4 = addDescription
         bool open;
         bool accepted;
         int8 votes;
@@ -21,16 +24,16 @@ contract Voting {
         mapping (address => bool) vote;
     }
 
-    mapping(address => candidate) public candidates;
+    mapping(address => proposal) public proposals;
 
-    mapping(address => address[]) openCandidates;
+    mapping(address => address[]) openProposals;
 
     Leader leader;
     TimeLock timeLock;
 
-    event VoteCreated(address indexed _suggestedBy, address indexed _candidate, uint _time);
-    event Voted(address indexed _member, address indexed _candidate, int8 _vote, uint _time);
-    event VoteCompleted(address indexed _candidate, bool indexed _accepted, uint _time);
+    event VoteCreated(address indexed _suggestedBy, address indexed _proposal, uint _proposalType, uint _time);
+    event Voted(address indexed _member, address indexed _proposal, int8 _vote, uint _time);
+    event VoteCompleted(address indexed _proposal, bool indexed _accepted, string _proposalType, uint _time);
 
     constructor(address _leader, address _timeLock) {
         leader = Leader(_leader);
@@ -42,88 +45,97 @@ contract Voting {
         _;
     }
 
-/// @notice Opens a vote for a new candidate
-/// @param _candidate The suggested candidate to be voted on
-/// @param _grantAmount Grant size for the new candidate
-/// @param _suggestedBy The member that suggested this candidate
+/// @notice Opens a vote for a new proposal
+/// @param _proposal The suggested proposal to be voted on
+/// @param _grantAmount Grant size for the new proposal
+/// @param _suggestedBy The member that suggested this proposal
 
-    function createVote(address _candidate, uint _grantAmount, address _suggestedBy) public onlyClubs {
-        require(leader.clubOfMember(_candidate)==address(0),"is member");
-        require(!candidates[_candidate].open, "already been suggested");
-        // some of these values need to be set to 0 or false because they may have already been a candidate
-        candidates[_candidate].open = true;
-        candidates[_candidate].accepted = false;
-        candidates[_candidate].creationTime = block.timestamp;
-        candidates[_candidate].grantAmount = _grantAmount;
-        candidates[_candidate].club = msg.sender;
-        candidates[_candidate].votes = 0;
+    function createProposal(uint _proposalType, uint _grantAmount, address _proposal, address _suggestedBy) external onlyClubs {
+        require(!proposals[_proposal].open, "already open");
+        //if adding members then require that the member is not already a member
+        if(_proposalType == 1 || _proposalType == 2){
+            require(leader.clubOfMember(_proposal)==address(0),"is member");
+        } else if (_proposalType == 3){
+            require(leader.clubOfMember(_proposal) == leader.clubOfMember(_suggestedBy),"not member of your club");
+        }
+        // some of these values need to be set to 0 or false because they may have already been a proposal that failed
+        proposals[_proposal].proposalType = _proposalType;
+        proposals[_proposal].open = true;
+        proposals[_proposal].accepted = false;
+        proposals[_proposal].creationTime = block.timestamp;
+        proposals[_proposal].grantAmount = _grantAmount;
+        proposals[_proposal].club = msg.sender;
+        proposals[_proposal].votes = 0;
 
-        openCandidates[msg.sender].push(_candidate);
+        openProposals[msg.sender].push(_proposal);
 
-        emit VoteCreated(_suggestedBy, _candidate, block.timestamp);
+        vote(_proposal, _suggestedBy, 1);
+
+        emit VoteCreated(_suggestedBy, _proposal, _proposalType,  block.timestamp);
     }
 
-/// @notice Candidate must accept before becoming a member
+/// @notice Proposal must accept before becoming a member
 /// @dev If the new member is a contract, you must build a function for it to accept
     function accept() public {
-        require(candidates[msg.sender].open == true, "not open");
-        candidates[msg.sender].accepted = true;
+        require(proposals[msg.sender].open == true, "not open");
+        proposals[msg.sender].accepted = true;
     } 
 
-/// @notice Adds the votes for a candidate
-/// @param _candidate The suggested candidate to be voted on
+/// @notice Adds the votes for a proposal
+/// @param _proposal The suggested proposal to be voted on
 /// @param _voter the member voting
 /// @param _vote the vote, +1 or -1
-    function vote(address _candidate, address _voter, int8 _vote) public onlyClubs {
-        require(!candidates[_candidate].vote[_voter],"voted");
+    function vote(address _proposal, address _voter, int8 _vote) public onlyClubs {
+        require(!proposals[_proposal].vote[_voter],"voted");
         require(_vote == 1 || _vote == -1, "vote not right");
-        require(candidates[_candidate].open, "not open");
-        candidates[_candidate].vote[_voter]=true;
-        candidates[_candidate].votes += _vote;
+        require(proposals[_proposal].open, "not open");
+        proposals[_proposal].vote[_voter]=true;
+        proposals[_proposal].votes += _vote;
 
-        emit Voted(_voter, _candidate, _vote, block.timestamp);
+        emit Voted(_voter, _proposal, _vote, block.timestamp);
     }
 
-/// @notice Closes the vote and adds/closes the candidate
-/// @param _candidate The suggested candidate
-    function finishVote(address _candidate) public onlyClubs {
-        require(block.timestamp > candidates[_candidate].creationTime+2 weeks, "too soon bro");
-        require(candidates[_candidate].open == true, "not open");
+/// @notice Closes the vote and adds/closes the proposal
+/// @param _proposal The suggested proposal
+    function finishVote(address _proposal) public onlyClubs {
+        // need to modify pass percentage for remove member and make it call the right functions based on proposal type
+        require(block.timestamp > proposals[_proposal].creationTime+2 weeks, "too soon bro");
+        require(proposals[_proposal].open == true, "not open");
 
-        candidates[_candidate].open = false;
+        proposals[_proposal].open = false;
 
-        for (uint i = 0; i < openCandidates[msg.sender].length; i++) {
+        for (uint i = 0; i < openProposals[msg.sender].length; i++) {
             
-            if(openCandidates[msg.sender][i] == _candidate) {
-                delete openCandidates[msg.sender][i];
+            if(openProposals[msg.sender][i] == _proposal) {
+                delete openProposals[msg.sender][i];
 
-                for (uint j = i; j<openCandidates[msg.sender].length-1; j++){
-                    openCandidates[msg.sender][j] = openCandidates[msg.sender][j+1];
+                for (uint j = i; j<openProposals[msg.sender].length-1; j++){
+                    openProposals[msg.sender][j] = openProposals[msg.sender][j+1];
                 }
-                openCandidates[msg.sender].pop();
+                openProposals[msg.sender].pop();
             }
         }
 
-        if(candidates[_candidate].votes>=1){
-            require(candidates[_candidate].accepted == true, "has not accepted");
-            emit VoteCompleted(_candidate, true, block.timestamp);
+        if(proposals[_proposal].votes>=1){
+            require(proposals[_proposal].accepted == true, "has not accepted");
+            emit VoteCompleted(_proposal, true, block.timestamp);
             // deposit the grant into the timeLock
-            leader.increaseAllowance(address(timeLock), candidates[_candidate].grantAmount);
-            timeLock.deposit(_candidate ,candidates[_candidate].grantAmount);
+            leader.increaseAllowance(address(timeLock), proposals[_proposal].grantAmount);
+            timeLock.deposit(_proposal ,proposals[_proposal].grantAmount);
 
-            Club(candidates[_candidate].club).passVote(_candidate, candidates[_candidate].grantAmount);
+            Club(proposals[_proposal].club).passVote(_proposal, proposals[_proposal].grantAmount);
         } else {
-            emit VoteCompleted(_candidate, false, block.timestamp);
-            leader.transfer(candidates[_candidate].club, candidates[_candidate].grantAmount);
+            emit VoteCompleted(_proposal, false, block.timestamp);
+            leader.transfer(proposals[_proposal].club, proposals[_proposal].grantAmount);
         }
     }
 
-/// @notice shows the open candidates for a club
-/// @param _club The club to show openCandidates for
-/// @return An array of the open candidates for this club
+/// @notice shows the open proposals for a club
+/// @param _club The club to show openProposals for
+/// @return An array of the open proposals for this club
 
     function opens(address _club) public view returns (address[] memory) {
-        return openCandidates[_club];
+        return openProposals[_club];
     }
 
 }
@@ -172,45 +184,45 @@ contract Club {
     }
 
 /// @notice Allows a member to submit a candiate to be voted on by their club, also votes yes for them
-/// @param _candidate The suggested candidate to be voted on
-/// @param _grantAmount Grant size for the new candidate
-    function createVote(address _candidate, uint _grantAmount) public onlyMembers {
+/// @param _proposal The suggested proposal to be voted on
+/// @param _grantAmount Grant size for the new proposal
+    function createVote(address _proposal, uint _grantAmount) public onlyMembers {
         //make sure this contract has enough funds to pay the grant
         require(_grantAmount <= leader.balanceOf(address(this)), "not enough funds");
         // send the grant to the voting contract
         leader.transfer(address(voting), _grantAmount);  
         //create the vote
-        voting.createVote(_candidate, _grantAmount, msg.sender);
-        vote(_candidate, 1);
+        voting.createVote(_proposal, _grantAmount, msg.sender);
+        vote(_proposal, 1);
     }
 
-/// @notice Adds the votes for a candidate
-/// @param _candidate The suggested candidate to be voted on
+/// @notice Adds the votes for a proposal
+/// @param _proposal The suggested proposal to be voted on
 /// @param _vote the vote, +1 or -1
-    function vote (address _candidate, int8 _vote) public onlyMembers {
-        voting.vote(_candidate, msg.sender, _vote);
+    function vote (address _proposal, int8 _vote) public onlyMembers {
+        voting.vote(_proposal, msg.sender, _vote);
     }
 
 
-/// @notice Closes the vote and adds/closes the candidate
-/// @param _candidate The suggested candidate
-    function finishVote(address _candidate) public onlyMembers {
-        voting.finishVote(_candidate);
+/// @notice Closes the vote and adds/closes the proposal
+/// @param _proposal The suggested proposal
+    function finishVote(address _proposal) public onlyMembers {
+        voting.finishVote(_proposal);
     }
 
 /// @notice called by the voting contract to add a member if the vote has passed
-/// @param _candidate The suggested candidate
+/// @param _proposal The suggested proposal
 /// @param _grant The size of the grant
-    function passVote(address _candidate, uint _grant) public {
+    function passVote(address _proposal, uint _grant) public {
         require(msg.sender == address(voting));
             if(members.length<7){
-                members.push(_candidate);
+                members.push(_proposal);
                 numberOfMembers += 1;
-                clubMembers[_candidate] = 1;
-                leader.addToAllMembers(_candidate, address(this), address(this));
-                emit MemberAdded(_candidate, address(this), _grant, block.timestamp);
+                clubMembers[_proposal] = 1;
+                leader.addToAllMembers(_proposal, address(this), address(this));
+                emit MemberAdded(_proposal, address(this), _grant, block.timestamp);
             } else { 
-                clubFactory.createClub(_candidate, address(this));
+                clubFactory.createClub(_proposal, address(this));
             }         
         }
 

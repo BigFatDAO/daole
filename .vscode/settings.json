@@ -5,6 +5,8 @@
     "diffEditor.wordWrap": "on",
     "cSpell.words": [
         "Cpath",
+        "fontsource",
+        "roboto",
         "sankey"
     ]
 }
