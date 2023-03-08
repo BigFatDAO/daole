@@ -1,7 +1,7 @@
 import React from "react";
 import { RouterProvider, createBrowserRouter } from "react-router-dom";
 import { createRoot } from "react-dom/client";
-import { Dapp } from "./components/Dapp";
+// import { Dapp } from "./components/Dapp";
 import { LandingPage } from "./landingPage/App";
 import "bootstrap/dist/css/bootstrap.css";
 //importing fonts for Material UI
@@ -19,7 +19,7 @@ const root = createRoot(document.getElementById("root"));
 
 const router = (createBrowserRouter)([
   {path: "/", element: <LandingPage />},
-  {path: "/dapp654", element: <Dapp />},
+  // {path: "/dapp654", element: <Dapp />},
 ]);
 
 root.render(<RouterProvider router={router} />);
