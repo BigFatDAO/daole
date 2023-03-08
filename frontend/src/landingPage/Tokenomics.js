@@ -11,10 +11,10 @@ export default function Tokenomics() {
             <div>
               <ul>
                 <li>
-                  3.5B: Liquidity
+                  4.5B: Liquidity
                   <ul>
                     <li>500M at launch</li>
-                    <li>3B in yield farm</li>
+                    <li>4B in yield farm</li>
                   </ul>
                 </li>
                 <li>
@@ -25,10 +25,10 @@ export default function Tokenomics() {
                   </ul>
                 </li>
                 <li>
-                  5B: Funding for grants
+                  4B: Funding for grants
                   <ul>
-                    <li>3M to every founding Club</li>
-                    <li>4.7B released at 4% of remaining supply/4 weeks</li>
+                    <li>1M to every founding Club</li>
+                    <li>Remainder released at 4% of remaining supply/4 weeks</li>
                   </ul>
                 </li>
               </ul>

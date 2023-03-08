@@ -91,10 +91,10 @@ export class LandingPage extends Component {
         <section className="app-body">
           <h1 className="app-section-title">Principles and Goals</h1>
           <p className="app-body-text">
-            The idea for Eth Club 7 came from the fallout of Harmony One's "100 DAOs" initiative, where the community felt funds were allocated to DAOs that didn't benefit the Harmony ecosystem. At the same time, during early COVID, there was a lot of talk of the decline of democracy.
+            The idea for Eth Club 7 came from the fallout of Harmony One's "100 DAOs" initiative, where the community felt funds were allocated that didn't benefit the Harmony ecosystem. At the same time, during early COVID, there was a lot of talk of the decline of democracy.
           </p>
           <p className="app-body-text">
-            The goal of Eth Club 7 is to create a DAO that's democratic but doesn't rely on large-scale elections. Where small groups can work efficiently, and actions that benefit the whole DAO are rewarded.
+            The goal of Eth Club 7 is to create a DAO that's democratic but doesn't rely on large-scale votes. Where small groups can work efficiently, and actions that benefit the whole DAO are rewarded.
           </p>
           <p className="app-body-text">
             Eth Club 7 can be viewed as a playground for new ideas. There are many ways a Club can succeed. The low cost of starting a Club encourages innovation and experimentation, and the performance-based funding model rewards success.

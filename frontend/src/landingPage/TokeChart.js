@@ -2,39 +2,39 @@ import React from "react";
 import { PieChart, Pie, Tooltip} from "recharts";
 
 const data01 = [
-  { name: "Liquidity", value: 3500, fill: "#61d9fa" },
+  { name: "Liquidity", value: 4500, fill: "#61d9fa" },
   { name: "Treasury", value: 1500, fill: "#61fb6b" },
-  { name: "Grants", value: 5000, fill: "#d733c4" },
+  { name: "Grants", value: 4000, fill: "#d733c4" },
 ];
 const data02 = [
-  { name: "Yield Farm", value: 3000, fill: "#00b1e2" },
+  { name: "Yield Farm", value: 4000, fill: "#00b1e2" },
   { name: "Launch Liquidity", value: 500, fill: "#afeeff" },
   { name: "Ongoing DAO controlled", value: 1000, fill: "#01b00d" },
   { name: "Pre-Launch Team", value: 500, fill: "#b0ffb5" },
-  { name: "Ongoing Grants", value: 4700, fill: "#c314ae" },
-  { name: "Founding Clubs", value: 300, fill: "#fa66e9" },
+  { name: "Ongoing Grants", value: 3900, fill: "#c314ae" },
+  { name: "Founding Clubs", value: 100, fill: "#ff00f7" },
 ];
 
 function getIntroOfPage(label) {
   switch(label) {
     case "Liquidity":
-      return "500M at launch, 3B in yield farm";
+      return "500M at launch, 4B in yield farm";
     case "Treasury":
       return "500M pre-launch team: Locked 6 months + 100 days. 1B controlled DAO after launch";
     case "Grants":
-      return "300M to founding Clubs, 4.7B released over time to Clubs on a performance basis";
+      return "4B for clubs, 1M to each founding Club, remainder released over time on a performance basis";
     case "Yield Farm":
-      return "3B released over 7 years";
+      return "4B released over 7 years";
     case "Launch Liquidity":
-      return "500M put into liquidity at launch with the ONE from launch auction";
+      return "500M put into liquidity at launch with the ONE from whitelist sales";
     case "Ongoing DAO controlled":
       return "1B to be distributed as grants by the DAO, voted on per-token basis";
     case "Pre-Launch Team":
       return "500M split between team who worked on the project before launch";
     case "Ongoing Grants":
-      return "4.7B minted at 4% of remaining supply every 4 weeks";
+      return "~3.9B minted at 4% of remaining supply every 4 weeks";
     case "Founding Clubs":
-      return "3M to every founding club";
+      return "1M to every founding club";
     default:
       return "";
   }
