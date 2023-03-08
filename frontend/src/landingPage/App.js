@@ -21,16 +21,16 @@ export class LandingPage extends Component {
         <section className="app-header">
           <img src={logo} className="app-logo" alt="logo" />
           <h1 className="app-title">Eth Club 7</h1>
-          <h2 className="app-subtitle">Algorithmic Angel Investment</h2>
+          <h2 className="app-subtitle">Evolutionary Investment DAO</h2>
           {/* add two buttons */}
           <div className="app-buttons">
             {/* these buttons open up external links */}
-            <button
+            {/* <button
               className="app-button"
               onClick={() => window.open("https://docs.ethclub7.one", "_blank")}
             >
               Documentation
-            </button>
+            </button> */}
             <button
               className="app-button"
               onClick={() =>
@@ -43,45 +43,24 @@ export class LandingPage extends Component {
         </section>
         <section className="app-body-intro">
           <p className="app-intro">
-            <strong>Eth Club 7 is a DAO</strong>, providing a way to invest in small businesses and startups around the world.
+            <strong>Eth Club 7</strong> is an ecosystem of 7-member Clubs that
+            compete for funds while cooperating to grow the DAO.
           </p>
         </section>
         <section className="app-body">
           <h1 className="app-section-title">How it works</h1>
           <p className="app-body-text">
-            The DAO is made up of 7-member Clubs. Each Club is allocated funds
-            monthly to invest as grants to onboard new businesses.
+            The DAO is made up of many 7-member Clubs. Each Club is allocated
+            funds monthly, in the form of the ecosystem token, DAOLE, to invest
+            as grants to onboard new members.
           </p>
           <p className="app-body-text">
             The amount of funds allocated to each Club is based on the
-            performance of their previous investments.
+            transaction volume of their previous investments, allowing the
+            better Clubs to grow, and the ecosystem to thrive.
           </p>
           <p className="app-body-text">
-            The funds allocated are the ecosystems ERC-20 token, DAOLE, which
-            participating businesses agree to accept for transactions upon
-            receiving a grant.
-          </p>
-          <p className="app-body-text">
-            The return on investment for the DAO comes from the adoption of
-            DAOLE creating an upward pressure on price, and a 2% fee on every
-            transaction to a member.
-          </p>
-        </section>
-
-        <section className="app-body">
-          <h1 className="app-section-title">Why DAOLE?</h1>
-          <p className="app-body-text">
-            Customer adoption is encouraged by businesses accepting DAOLE at a
-            30% discount compared to fiat.
-          </p>
-          <p className="app-body-text">
-            Businesses benefit by upwards price pressure from this customer
-            adoption, and customers benefit by receiving the discount.
-          </p>
-          <p className="app-body-text">
-            This creates a win-win cycle of adoption and price appreciation,
-            where businesses are incentivized to accept DAOLE and customers are
-            incentivized to use it.
+            The return on investment for the DAO as a whole comes from a 2% burn on every transaction to a member.
           </p>
         </section>
         <section className="app-body">
@@ -108,6 +87,18 @@ export class LandingPage extends Component {
               </li>
             </ul>
           </div>
+        </section>
+        <section className="app-body">
+          <h1 className="app-section-title">Principles and Goals</h1>
+          <p className="app-body-text">
+            The idea for Eth Club 7 came from the fallout of Harmony One's "100 DAOs" initiative, where the community felt funds were allocated to DAOs that didn't benefit the Harmony ecosystem. At the same time, during early COVID, there was a lot of talk of the decline of democracy.
+          </p>
+          <p className="app-body-text">
+            The goal of Eth Club 7 is to create a DAO that's democratic but doesn't rely on large-scale elections. Where small groups can work efficiently, and actions that benefit the whole DAO are rewarded.
+          </p>
+          <p className="app-body-text">
+            Eth Club 7 can be viewed as a playground for new ideas. There are many ways a Club can succeed. The low cost of starting a Club encourages innovation and experimentation, and the performance-based funding model rewards success.
+          </p>
         </section>
         <section className="app-timeline">
           <h1 className="app-section-title">Roadmap</h1>

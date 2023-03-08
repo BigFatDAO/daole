@@ -32,7 +32,7 @@ export default function Tokenomics() {
                   </ul>
                 </li>
               </ul>
-              Note: All grants are locked for 6 months then released linearly
+              Note: All grants are locked for 1 month then released linearly
               over 100 days.
             </div>
           </div>
