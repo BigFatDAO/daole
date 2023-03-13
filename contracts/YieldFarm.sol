@@ -148,6 +148,3 @@ interface IERC20 {
     event Transfer(address indexed from, address indexed to, uint value);
     event Approval(address indexed owner, address indexed spender, uint value);
 }
-
-//Anon Acc staked 99000000000000000000 at 11:15 on feb 18
-// Account 2 staked 20000000000000000000 at 11:15 on feb 18

@@ -3,10 +3,147 @@
 pragma solidity ^0.8.9;
 
 import './EthClub7Interfaces.sol';
+import './YieldFarm.sol';
 import './DAOLE.sol';
+
 /// @title Eth Club 7
 /// @author Mr Nobody
 /// @notice Creates a system of DAOs to allocate grants
+
+// holds tokens for a set period, plus 100 day linear release.
+// we'll use 6 months for dev funds and 1 month for member grants
+contract TimeLock {
+    struct balances {
+        uint256 balance;
+        uint256 releaseTime;
+    }
+
+    address public leader;
+    address public owner;
+
+    mapping(address => balances) releases;
+
+    constructor() {
+        owner = msg.sender;
+    }
+
+    modifier onlyOwner {
+        require(msg.sender == owner, "not owner");
+        _;
+    }
+
+    //set leader address
+    function setLeader(address _leader) external onlyOwner {
+        leader = _leader;
+    }
+
+    //deposit function updates balance and sets locktime
+    function deposit(address _member, uint256 _amount, uint256 _weeks) external {
+        require(_amount > 0, "amount must be greater than 0");
+        releases[_member].releaseTime = block.timestamp + _weeks*7*24*60*60;
+        releases[_member].balance += _amount;
+        Leader(leader).transferFrom(msg.sender, address(this), _amount);        
+    }
+
+    //withdraw function releases funds linerally over 100 days, after 6 months
+    function withdraw() external {
+        require(releases[msg.sender].balance > 0, "no balance");
+        require(releases[msg.sender].releaseTime < block.timestamp, "locked");
+        //calculate amount to release
+        uint256 amount = releases[msg.sender].balance * (block.timestamp - releases[msg.sender].releaseTime) / (100 days);
+        //update balance
+        if(amount > releases[msg.sender].balance) amount = releases[msg.sender].balance;
+        releases[msg.sender].balance -= amount;
+        Leader(leader).transfer(msg.sender, amount);
+    }
+
+    function getBalance(address _member) public view returns (uint256) {
+        return releases[_member].balance;
+    }
+
+    function getReleaseTime(address _member) public view returns (uint256) {
+        return releases[_member].releaseTime;
+    }
+}
+
+/// @notice WhiteListed addresses that can create their own clubs
+contract WhiteList{
+    mapping(address => bool) whiteList;
+    address public owner;
+    address public clubFactoryAddress;
+    address public leader;
+    uint256 public totalClubs;
+    uint256 public unlockTime;
+
+/// @notice adds owner
+    constructor(){
+        owner = msg.sender;
+        unlockTime = block.timestamp + 90 days;
+    }
+
+    modifier onlyOwner {
+        require(owner == msg.sender, "not owner");
+        _;
+    }
+
+/// @notice adds clubFactory address
+/// @param _clubFactoryAddress The clubFactory address
+    function addClubFactoryAddress(address _clubFactoryAddress) external onlyOwner {
+        clubFactoryAddress = _clubFactoryAddress;
+    }
+
+/// @notice Adds an address to the WhiteList - only owner.
+/// @dev This is a placeholder. Needs to be updated to burn an NFT to add to the whitelist
+/// @param _winner The address to add to the whitelist
+    function addToWhiteList(address _address) external payable {
+        require(msg.value == 1000 ether, "not enough ONE");
+        require(block.timestamp < unlockTime, "too late");
+        require(whiteList[_address]==false, "already whitelisted");
+        whiteList[_address] = true;
+    }
+
+    function refund() external {
+        require(block.timestamp < unlockTime, "too late");
+        require(whiteList[msg.sender]==true, "not whitelisted");
+        whiteList[_address] = false;
+        payable(owner).transfer(1000 ether);
+    }
+
+/// @notice Creates a club for a whitelisted address
+    function createClub() external {
+        require(whiteList[msg.sender]==true,"not whitelisted");
+        require(block.timestamp > unlockTime, "too early");
+        ClubFactory(clubFactoryAddress).createClub(msg.sender,address(this));
+    }
+
+/// @notice Create the Uniswap V2 pair for the token
+/// @param _tokenAddress The token address
+/// @dev Need to figure this out
+    function createPair() external {
+        require(msg.sender == leader, "not leader");
+        //uniswapFactory(leader).createPair(_tokenAddress);
+        //DAOLE = numberOfClubs * 1e24;
+        //ONE = this.balance;
+        //pair.fund
+    }
+
+/// @notice Creates the YieldFarm contract
+/// @param leader The DAOLE address
+/// @param pair The Uniswap V2 pair address
+/// @dev Need to figure this out
+    function createYieldFarm() external {
+        require(msg.sender == leader, "not leader");
+        YieldFarm yieldFarm = new YieldFarm(leader, pair);
+        //transfer 4B - numberofClubs * 1M
+        uint rewards = 4e27 - totalClubs * 1e24;
+        Leader(leader).transfer(address(yieldFarm), rewards);
+        //set rewards duration to 7 years
+        uint duration = 7 * 365 days;
+        yieldFarm.setRewardsDuration(duration);
+        yieldFarm.notifyRewardAmount(rewards);
+    }
+
+}
 
 /// @notice The Leader contract calculates clubs performace. Mints, transfers and burns.
 contract Leader is Daole {
@@ -43,17 +180,6 @@ contract Leader is Daole {
         _;
     }
 
-/// @notice Adds the new club to clubs struct, mints grant to the new club
-/// @param _member1 The first member of the club
-/// @param _club The club that's just been created
-/// @param _addedBy The club that added member1
-    function finishCreation(address _member1, address _club, address _addedBy) public {
-        require(msg.sender == clubFactoryAddress,"not factory");
-        clubs[_club] = true;
-        addToAllMembers(_member1, _addedBy, _club);
-//        emit ClubCreated(_owner, _addedBy, _grantAmount, block.timestamp);
-    }
-
 /// @notice Transfers. Adds transfers to members to their clubs' performance
 /// @param _to The receiver
 /// @param _amount Transfer size
@@ -69,6 +195,27 @@ contract Leader is Daole {
         return true;
     }
 
+/// @notice Called by clubs or clubFactory to add members to the leader mappings
+/// @param _memberAddress Member to be added
+/// @param _addedBy The club that added the member
+/// @param _club The club of the member
+    function addToAllMembers(address _memberAddress, address _addedBy, address _club ) public {
+        require(clubs[msg.sender]||msg.sender==clubFactoryAddress);
+        members[_memberAddress].addedBy = _addedBy;
+        members[_memberAddress].club = _club;
+    }
+
+/// @notice Adds the new club to clubs struct, mints grant to the new club
+/// @param _member1 The first member of the club
+/// @param _club The club that's just been created
+/// @param _addedBy The club that added member1
+    function finishCreation(address _member1, address _club, address _addedBy) public {
+        require(msg.sender == clubFactoryAddress,"not factory");
+        clubs[_club] = true;
+        addToAllMembers(_member1, _addedBy, _club);
+//        emit ClubCreated(_owner, _addedBy, _grantAmount, block.timestamp);
+    }
+
 /// @notice 4-weekly payment to clubs, called by the club contracts
 /// @dev can this be used to fund the initial 100 clubs?
     function payClubs() public onlyClubs {
@@ -81,16 +228,6 @@ contract Leader is Daole {
         uint payment = IPerformance(performance).getPayment(totalGrants[month], msg.sender);
 
         _mint(msg.sender, payment);
-    }
-
-/// @notice Called by clubs or clubFactory to add members to the leader mappings
-/// @param _memberAddress Member to be added
-/// @param _addedBy The club that added the member
-/// @param _club The club of the member
-    function addToAllMembers(address _memberAddress, address _addedBy, address _club ) public {
-        require(clubs[msg.sender]||msg.sender==clubFactoryAddress);
-        members[_memberAddress].addedBy = _addedBy;
-        members[_memberAddress].club = _club;
     }
 
 /// @notice Returns the club of an address
@@ -121,44 +258,6 @@ contract Leader is Daole {
         emit Log("fallback");
     }
 }
-
-/// @notice WhiteListed addresses that can create their own clubs
-contract WhiteList{
-    mapping(address => bool) whiteList;
-    address public owner;
-    address public clubFactoryAddress;
-
-/// @notice adds owner
-    constructor(){
-        owner = msg.sender;
-    }
-
-    modifier onlyOwner {
-        require(owner == msg.sender, "not owner");
-        _;
-    }
-
-/// @notice adds clubFactory address
-/// @param _clubFactoryAddress The clubFactory address
-    function addClubFactoryAddress(address _clubFactoryAddress) public onlyOwner {
-        clubFactoryAddress = _clubFactoryAddress;
-    }
-
-/// @notice Adds an address to the WhiteList - only owner.
-/// @dev This is a placeholder. Needs to be updated to burn an NFT to add to the whitelist
-/// @param _winner The address to add to the whitelist
-    function addToWhiteList(address _winner) public onlyOwner {
-        whiteList[_winner] = true;
-    }
-
-/// @notice Creates a club for a whitelisted address
-    function createClub() public {
-        require(whiteList[msg.sender]==true,"not whitelisted");
-        ClubFactory(clubFactoryAddress).createClub(msg.sender,address(this));
-    }
-
-}
-
 
 contract Voting {
     /// @notice This contract stores the proposal info and executes voting
@@ -266,9 +365,9 @@ contract Voting {
         if(proposals[_proposal].votes>=1){
             emit VoteCompleted(_proposal, true, "addMember", block.timestamp);
             
-            // deposit the grant into the timeLock
+            // deposit the grant into the timeLock for 4 weeks+
             leader.increaseAllowance(address(timeLock), proposals[_proposal].grantAmount);
-            timeLock.deposit(_proposal ,proposals[_proposal].grantAmount);
+            timeLock.deposit(_proposal ,proposals[_proposal].grantAmount, 4);
             
             // add the member to the club
             Club(proposals[_proposal].club).addMember(_proposal, proposals[_proposal].grantAmount);
@@ -480,7 +579,7 @@ contract ClubFactory {
         if(msg.sender == whiteList) {
             Leader(leader).transfer(address(club), 2250e21);
             Leader(leader).increaseAllowance(timeLock, 1125e21);
-            TimeLock(timeLock).deposit(_member1, 1125e21);
+            TimeLock(timeLock).deposit(_member1, 1125e21,4);
         }
         numberOfClubs += 1;
     }
@@ -533,60 +632,3 @@ contract Performance {
 
 }
 
-// holds the member grants for 6 months
-contract TimeLock {
-    struct balances {
-        uint256 balance;
-        uint256 releaseTime;
-    }
-
-    address public leader;
-    address public owner;
-
-    mapping(address => balances) releases;
-
-    constructor() {
-        owner = msg.sender;
-    }
-
-    modifier onlyOwner {
-        require(msg.sender == owner, "not owner");
-        _;
-    }
-
-    //set leader address
-    function setLeader(address _leader) public onlyOwner {
-        leader = _leader;
-    }
-
-    //deposit function updates balance and sets locktime
-    function deposit(address _member, uint256 _amount) public {
-        require(_amount > 0, "amount must be greater than 0");
-        releases[_member].releaseTime = block.timestamp + (26 weeks);
-        releases[_member].balance += _amount;
-        Leader(leader).transferFrom(msg.sender, address(this), _amount);        
-    }
-
-    //withdraw function releases funds linerally over 100 days, after 6 months
-    function withdraw() public {
-        require(releases[msg.sender].balance > 0, "no balance");
-        require(releases[msg.sender].releaseTime < block.timestamp, "locked");
-        //calculate amount to release
-        uint256 amount = releases[msg.sender].balance * (block.timestamp - releases[msg.sender].releaseTime) / (100 days);
-        //update balance
-        if(amount > releases[msg.sender].balance) amount = releases[msg.sender].balance;
-        releases[msg.sender].balance -= amount;
-        Leader(leader).transfer(msg.sender, amount);
-    }
-
-    function getBalance(address _member) public view returns (uint256) {
-        return releases[_member].balance;
-    }
-
-    function getReleaseTime(address _member) public view returns (uint256) {
-        return releases[_member].releaseTime;
-    }
-
-
-
-}
