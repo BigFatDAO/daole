@@ -5,6 +5,7 @@ pragma solidity ^0.8.9;
 import './EthClub7Interfaces.sol';
 import './YieldFarm.sol';
 import './DAOLE.sol';
+import '@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol';
 
 /// @title Eth Club 7
 /// @author Mr Nobody
@@ -38,14 +39,14 @@ contract TimeLock {
     }
 
     //deposit function updates balance and sets locktime
-    function deposit(address _member, uint256 _amount, uint256 _weeks) external {
+    function deposit(address _member, uint256 _amount, uint256 _lockDays) external {
         require(_amount > 0, "amount must be greater than 0");
-        releases[_member].releaseTime = block.timestamp + _weeks*7*24*60*60;
+        releases[_member].releaseTime = block.timestamp + _lockDays* 1 days;
         releases[_member].balance += _amount;
         Leader(leader).transferFrom(msg.sender, address(this), _amount);        
     }
 
-    //withdraw function releases funds linerally over 100 days, after 6 months
+    //withdraw function releases funds linerally over 100 days, after the lockTime
     function withdraw() external {
         require(releases[msg.sender].balance > 0, "no balance");
         require(releases[msg.sender].releaseTime < block.timestamp, "locked");
@@ -72,6 +73,10 @@ contract WhiteList{
     address public owner;
     address public clubFactoryAddress;
     address public leader;
+    address public constant ROUTER = '0x3C8BF7e25EbfAaFb863256A4380A8a93490d8065';
+    address public constant FACTORY = '0xF166939E9130b03f721B0aE5352CCCa690a7726a';
+    address public constant WONE = '0xcF664087a5bB0237a0BAd6742852ec6c8d69A27a';
+    address public liquidityPair;
     uint256 public totalClubs;
     uint256 public unlockTime;
 
@@ -109,6 +114,12 @@ contract WhiteList{
         payable(owner).transfer(1000 ether);
     }
 
+/// @notice Owner can delay launch if needed
+/// @param _delay The number of days to delay launch
+    function delayLaunch(uint256 _delay) external onlyOwner {
+        unlockTime = block.timestamp + _delay * 1 days;
+    }
+
 /// @notice Creates a club for a whitelisted address
     function createClub() external {
         require(whiteList[msg.sender]==true,"not whitelisted");
@@ -118,13 +129,28 @@ contract WhiteList{
 
 /// @notice Create the Uniswap V2 pair for the token
 /// @param _tokenAddress The token address
-/// @dev Need to figure this out
+
     function createPair() external {
         require(msg.sender == leader, "not leader");
-        //uniswapFactory(leader).createPair(_tokenAddress);
-        //DAOLE = numberOfClubs * 1e24;
-        //ONE = this.balance;
-        //pair.fund
+        //we use the periphery router02 to create and fund the pair 
+        uint amountDaole = numberofClubs * 1e24;
+        uint amountOne = address(this).balance;
+
+        // Approve the router to spend your token
+        Leader(leader).approve(address(uniswapRouter), amountDaole);
+
+        // Create the pair
+        IUniswapV2Router02(ROUTER).addLiquidityETH{value: amountOne}(
+            leader,
+            amountDaole,
+            0,
+            0,
+            address(this),
+            block.timestamp+300
+        );
+
+        // Get the pair address
+        liquidityPair = IUniswapV2Factory(FACTORY).getPair(leader, WONE);
     }
 
 /// @notice Creates the YieldFarm contract
