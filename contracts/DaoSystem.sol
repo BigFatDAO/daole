@@ -73,21 +73,37 @@ contract WhiteList{
     address public owner;
     address public clubFactoryAddress;
     address public leader;
-    address public constant ROUTER = '0x3C8BF7e25EbfAaFb863256A4380A8a93490d8065';
-    address public constant FACTORY = '0xF166939E9130b03f721B0aE5352CCCa690a7726a';
-    address public constant WONE = '0xcF664087a5bB0237a0BAd6742852ec6c8d69A27a';
+    IUniswapV2Router02 public immutable router;
+    // Tranquil Finance: '0x3C8BF7e25EbfAaFb863256A4380A8a93490d8065';
+    IUniswapV2Factory public immutable factory; 
+    // Tranquil Finance: '0xF166939E9130b03f721B0aE5352CCCa690a7726a';
+    address public immutable wone; 
+    // '0xcF664087a5bB0237a0BAd6742852ec6c8d69A27a';
     address public liquidityPair;
     uint256 public totalClubs;
     uint256 public unlockTime;
 
 /// @notice adds owner
-    constructor(){
+    constructor(address _router, address _factory, address _wone){
+        router = IUniswapV2Router02(_router);
+        factory = IUniswapV2Factory(_factory);
+        wone = _wone;
         owner = msg.sender;
         unlockTime = block.timestamp + 90 days;
     }
 
     modifier onlyOwner {
         require(owner == msg.sender, "not owner");
+        _;
+    }
+
+    modifier onlyClosed {
+        require(block.timestamp > unlockTime, "too early");
+        _;
+    }
+
+    modifier onlyOpen {
+        require(block.timestamp < unlockTime, "too late");
         _;
     }
 
@@ -100,15 +116,13 @@ contract WhiteList{
 /// @notice Adds an address to the WhiteList - only owner.
 /// @dev This is a placeholder. Needs to be updated to burn an NFT to add to the whitelist
 /// @param _winner The address to add to the whitelist
-    function addToWhiteList(address _address) external payable {
+    function addToWhiteList(address _address) external payable onlyOpen {
         require(msg.value == 1000 ether, "not enough ONE");
-        require(block.timestamp < unlockTime, "too late");
         require(whiteList[_address]==false, "already whitelisted");
         whiteList[_address] = true;
     }
 
-    function refund() external {
-        require(block.timestamp < unlockTime, "too late");
+    function refund() external onlyOpen {
         require(whiteList[msg.sender]==true, "not whitelisted");
         whiteList[_address] = false;
         payable(owner).transfer(1000 ether);
@@ -116,31 +130,32 @@ contract WhiteList{
 
 /// @notice Owner can delay launch if needed
 /// @param _delay The number of days to delay launch
-    function delayLaunch(uint256 _delay) external onlyOwner {
+    function delayLaunch(uint256 _delay) external onlyOwner onlyOpen {
         unlockTime = block.timestamp + _delay * 1 days;
     }
 
 /// @notice Creates a club for a whitelisted address
-    function createClub() external {
+    function createClub() external onlyClosed {
         require(whiteList[msg.sender]==true,"not whitelisted");
-        require(block.timestamp > unlockTime, "too early");
         ClubFactory(clubFactoryAddress).createClub(msg.sender,address(this));
     }
 
 /// @notice Create the Uniswap V2 pair for the token
 /// @param _tokenAddress The token address
 
-    function createPair() external {
+    function createPair() external onlyClosed {
         require(msg.sender == leader, "not leader");
+        require(liquidityPair == address(0), "pair already created");
+        require(numberofClubs > 0, "no clubs");
         //we use the periphery router02 to create and fund the pair 
         uint amountDaole = numberofClubs * 1e24;
         uint amountOne = address(this).balance;
 
         // Approve the router to spend your token
-        Leader(leader).approve(address(uniswapRouter), amountDaole);
+        Leader(leader).approve(address(router), amountDaole);
 
         // Create the pair
-        IUniswapV2Router02(ROUTER).addLiquidityETH{value: amountOne}(
+        router.addLiquidityETH{value: amountOne}(
             leader,
             amountDaole,
             0,
@@ -150,16 +165,16 @@ contract WhiteList{
         );
 
         // Get the pair address
-        liquidityPair = IUniswapV2Factory(FACTORY).getPair(leader, WONE);
+        liquidityPair = factory.getPair(leader, wone);
     }
 
 /// @notice Creates the YieldFarm contract
 /// @param leader The DAOLE address
 /// @param pair The Uniswap V2 pair address
-/// @dev Need to figure this out
-    function createYieldFarm() external {
+    function createYieldFarm() external onlyClosed {
         require(msg.sender == leader, "not leader");
-        YieldFarm yieldFarm = new YieldFarm(leader, pair);
+        require(liquidityPair != address(0), "no pair");
+        YieldFarm yieldFarm = new YieldFarm(leader, liquidityPair);
         //transfer 4B - numberofClubs * 1M
         uint rewards = 4e27 - totalClubs * 1e24;
         Leader(leader).transfer(address(yieldFarm), rewards);
@@ -190,7 +205,7 @@ contract Leader is Daole {
 
 /// @notice Creates clubFactory and Voting contracts
 /// @param _whiteList The whitelist contract address
-    constructor(address _whiteList, address _timeLock) Daole() {
+    constructor(address _whiteList, address _timeLock, address _dev1, uint _amountDev1) Daole() {
         whiteList = _whiteList;
         Voting voting = new Voting(address(this), _timeLock);
         votingAddress = address(voting);
@@ -198,7 +213,10 @@ contract Leader is Daole {
         clubFactoryAddress = address(clubFactory);
         Performance perf = new Performance(address(this));
         performance = address(perf);
-        _mint(clubFactoryAddress,3375e23);
+        //mint 4B to whiteList
+        _mint(whiteList, 4e27);
+        //mint 500M to devs, to be transferred to the timelock
+        _mint(dev1, _amountDev1);
     }
 
     modifier onlyClubs{
