@@ -2,14 +2,134 @@
 
 pragma solidity ^0.8.9;
 
-import './EthClub7Interfaces.sol';
-import './YieldFarm.sol';
+import './Interfaces.sol';
 import './DAOLE.sol';
-import '@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol';
 
 /// @title Eth Club 7
 /// @author Mr Nobody
 /// @notice Creates a system of DAOs to allocate grants
+
+/// @notice WhiteListed addresses that can create their own clubs
+contract WhiteList{
+    mapping(address => bool) whiteList;
+    address public owner;
+    address public clubFactoryAddress;
+    address public leader;
+    address public yieldFarmAddress;
+    IUniswapV2Router02 public immutable router;
+    // Tranquil Finance: '0x3C8BF7e25EbfAaFb863256A4380A8a93490d8065';
+    IUniswapV2Factory public immutable factory; 
+    // Tranquil Finance: '0xF166939E9130b03f721B0aE5352CCCa690a7726a';
+    address public immutable wone; 
+    // '0xcF664087a5bB0237a0BAd6742852ec6c8d69A27a';
+    address public liquidityPair;
+    uint256 public totalClubs;
+    uint256 public closeTime;
+
+/// @notice adds owner
+    constructor(address _router, address _factory, address _wone){
+        router = IUniswapV2Router02(_router);
+        factory = IUniswapV2Factory(_factory);
+        wone = _wone;
+        owner = msg.sender;
+        closeTime = block.timestamp + 90 days;
+    }
+
+    modifier onlyOwner {
+        require(owner == msg.sender, "not owner");
+        _;
+    }
+
+    modifier onlyClosed {
+        require(block.timestamp > closeTime, "too early");
+        _;
+    }
+
+    modifier onlyOpen {
+        require(block.timestamp < closeTime, "too late");
+        _;
+    }
+
+/// @notice adds clubFactory address
+/// @param _clubFactoryAddress The clubFactory address
+    function addClubFactoryAddress(address _clubFactoryAddress) external onlyOwner {
+        clubFactoryAddress = _clubFactoryAddress;
+    }
+
+/// @notice Adds an address to the WhiteList - only owner.
+/// @dev This is a placeholder. Needs to be updated to burn an NFT to add to the whitelist
+/// @param _address The address to add to the whitelist
+    function addToWhiteList(address _address) external payable onlyOpen {
+        require(msg.value == 1000 ether, "not enough ONE");
+        require(whiteList[_address]==false, "already whitelisted");
+        whiteList[_address] = true;
+    }
+
+    function refund() external onlyOpen {
+        require(whiteList[msg.sender]==true, "not whitelisted");
+        whiteList[msg.sender] = false;
+        payable(owner).transfer(1000 ether);
+    }
+
+/// @notice Owner can delay launch if needed
+/// @param _delay The number of days to delay launch
+    function delayCloseTime(uint256 _delay) external onlyOwner onlyOpen {
+        closeTime = block.timestamp + _delay * 1 days;
+    }
+
+/// @notice adds yieldFarm address
+/// @param _yieldFarmAddress The yieldFarm address
+    function addYieldFarmAddress(address _yieldFarmAddress) external onlyOwner onlyOpen {
+        require(yieldFarmAddress == address(0), "Already set");
+        yieldFarmAddress = _yieldFarmAddress;
+    }
+
+/// @notice Creates a club for a whitelisted address
+    function createClub() external onlyClosed {
+        require(whiteList[msg.sender]==true,"not whitelisted");
+        ClubFactory(clubFactoryAddress).createClub(msg.sender,address(this));
+    }
+
+/// @notice Create the Uniswap V2 pair for the token
+    function createPair() external onlyClosed {
+        require(msg.sender == leader, "not leader");
+        require(liquidityPair == address(0), "pair already created");
+        require(totalClubs > 0, "no clubs");
+        //we use the periphery router02 to create and fund the pair 
+        uint amountDaole = totalClubs * 1e24;
+        uint amountOne = address(this).balance;
+
+        // Approve the router to spend your token
+        Leader(leader).approve(address(router), amountDaole);
+
+        // Create the pair
+        router.addLiquidityETH{value: amountOne}(
+            leader,
+            amountDaole,
+            0,
+            0,
+            address(this),
+            block.timestamp+300
+        );
+
+        // Get the pair address
+        liquidityPair = factory.getPair(leader, wone);
+    }
+
+/// @notice Initializes the YieldFarm contract
+    function initializeYieldFarm() external onlyClosed {
+        require(msg.sender == leader, "not leader");
+        require(liquidityPair != address(0), "no pair");
+        //transfer 4B - totalClubs * 1M
+        uint rewards = 4e27 - totalClubs * 1e24;
+        Leader(leader).transfer(yieldFarmAddress, rewards);
+        //set rewards duration to 7 years
+        uint duration = 7 * 365 days;
+        IYieldFarm(yieldFarmAddress).setTokens(liquidityPair, leader);
+        IYieldFarm(yieldFarmAddress).setRewardsDuration(duration);
+        IYieldFarm(yieldFarmAddress).notifyRewardAmount(rewards);
+    }
+}
 
 // holds tokens for a set period, plus 100 day linear release.
 // we'll use 6 months for dev funds and 1 month for member grants
@@ -67,125 +187,6 @@ contract TimeLock {
     }
 }
 
-/// @notice WhiteListed addresses that can create their own clubs
-contract WhiteList{
-    mapping(address => bool) whiteList;
-    address public owner;
-    address public clubFactoryAddress;
-    address public leader;
-    IUniswapV2Router02 public immutable router;
-    // Tranquil Finance: '0x3C8BF7e25EbfAaFb863256A4380A8a93490d8065';
-    IUniswapV2Factory public immutable factory; 
-    // Tranquil Finance: '0xF166939E9130b03f721B0aE5352CCCa690a7726a';
-    address public immutable wone; 
-    // '0xcF664087a5bB0237a0BAd6742852ec6c8d69A27a';
-    address public liquidityPair;
-    uint256 public totalClubs;
-    uint256 public unlockTime;
-
-/// @notice adds owner
-    constructor(address _router, address _factory, address _wone){
-        router = IUniswapV2Router02(_router);
-        factory = IUniswapV2Factory(_factory);
-        wone = _wone;
-        owner = msg.sender;
-        unlockTime = block.timestamp + 90 days;
-    }
-
-    modifier onlyOwner {
-        require(owner == msg.sender, "not owner");
-        _;
-    }
-
-    modifier onlyClosed {
-        require(block.timestamp > unlockTime, "too early");
-        _;
-    }
-
-    modifier onlyOpen {
-        require(block.timestamp < unlockTime, "too late");
-        _;
-    }
-
-/// @notice adds clubFactory address
-/// @param _clubFactoryAddress The clubFactory address
-    function addClubFactoryAddress(address _clubFactoryAddress) external onlyOwner {
-        clubFactoryAddress = _clubFactoryAddress;
-    }
-
-/// @notice Adds an address to the WhiteList - only owner.
-/// @dev This is a placeholder. Needs to be updated to burn an NFT to add to the whitelist
-/// @param _winner The address to add to the whitelist
-    function addToWhiteList(address _address) external payable onlyOpen {
-        require(msg.value == 1000 ether, "not enough ONE");
-        require(whiteList[_address]==false, "already whitelisted");
-        whiteList[_address] = true;
-    }
-
-    function refund() external onlyOpen {
-        require(whiteList[msg.sender]==true, "not whitelisted");
-        whiteList[_address] = false;
-        payable(owner).transfer(1000 ether);
-    }
-
-/// @notice Owner can delay launch if needed
-/// @param _delay The number of days to delay launch
-    function delayLaunch(uint256 _delay) external onlyOwner onlyOpen {
-        unlockTime = block.timestamp + _delay * 1 days;
-    }
-
-/// @notice Creates a club for a whitelisted address
-    function createClub() external onlyClosed {
-        require(whiteList[msg.sender]==true,"not whitelisted");
-        ClubFactory(clubFactoryAddress).createClub(msg.sender,address(this));
-    }
-
-/// @notice Create the Uniswap V2 pair for the token
-/// @param _tokenAddress The token address
-
-    function createPair() external onlyClosed {
-        require(msg.sender == leader, "not leader");
-        require(liquidityPair == address(0), "pair already created");
-        require(numberofClubs > 0, "no clubs");
-        //we use the periphery router02 to create and fund the pair 
-        uint amountDaole = numberofClubs * 1e24;
-        uint amountOne = address(this).balance;
-
-        // Approve the router to spend your token
-        Leader(leader).approve(address(router), amountDaole);
-
-        // Create the pair
-        router.addLiquidityETH{value: amountOne}(
-            leader,
-            amountDaole,
-            0,
-            0,
-            address(this),
-            block.timestamp+300
-        );
-
-        // Get the pair address
-        liquidityPair = factory.getPair(leader, wone);
-    }
-
-/// @notice Creates the YieldFarm contract
-/// @param leader The DAOLE address
-/// @param pair The Uniswap V2 pair address
-    function createYieldFarm() external onlyClosed {
-        require(msg.sender == leader, "not leader");
-        require(liquidityPair != address(0), "no pair");
-        YieldFarm yieldFarm = new YieldFarm(leader, liquidityPair);
-        //transfer 4B - numberofClubs * 1M
-        uint rewards = 4e27 - totalClubs * 1e24;
-        Leader(leader).transfer(address(yieldFarm), rewards);
-        //set rewards duration to 7 years
-        uint duration = 7 * 365 days;
-        yieldFarm.setRewardsDuration(duration);
-        yieldFarm.notifyRewardAmount(rewards);
-    }
-
-}
-
 /// @notice The Leader contract calculates clubs performace. Mints, transfers and burns.
 contract Leader is Daole {
     address public clubFactoryAddress;
@@ -216,7 +217,7 @@ contract Leader is Daole {
         //mint 4B to whiteList
         _mint(whiteList, 4e27);
         //mint 500M to devs, to be transferred to the timelock
-        _mint(dev1, _amountDev1);
+        _mint(_dev1, _amountDev1);
     }
 
     modifier onlyClubs{
@@ -232,7 +233,7 @@ contract Leader is Daole {
         if(members[_to].club != address(0)){
             _transfer(msg.sender, _to, _amount*98/100);
             _burn(msg.sender, _amount/50);
-            IPerformance(performance).addPerformance(_amount, members[_to].addedBy, members[_to].club);
+            Performance(performance).addPerformance(_amount, members[_to].addedBy, members[_to].club);
         } else {
             _transfer(msg.sender, _to, _amount);
         }
@@ -269,7 +270,7 @@ contract Leader is Daole {
             totalGrants[month] = (MAX_SUPPLY - totalSupply())*4/100;
         }
 
-        uint payment = IPerformance(performance).getPayment(totalGrants[month], msg.sender);
+        uint payment = Performance(performance).getPayment(totalGrants[month], msg.sender);
 
         _mint(msg.sender, payment);
     }

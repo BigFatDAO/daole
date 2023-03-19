@@ -6,8 +6,8 @@ pragma solidity ^0.8;
 
 
 contract YieldFarm {
-    IERC20 public immutable stakingToken;
-    IERC20 public immutable rewardsToken;
+    IERC20 public stakingToken;
+    IERC20 public rewardsToken;
 
     address public owner;
 
@@ -31,10 +31,8 @@ contract YieldFarm {
     // User address => staked amount
     mapping(address => uint) public balanceOf;
 
-    constructor(address _stakingToken, address _rewardToken) {
-        owner = msg.sender;
-        stakingToken = IERC20(_stakingToken);
-        rewardsToken = IERC20(_rewardToken);
+    constructor(address _whitelist) {
+        owner = _whitelist;
     }
 
     modifier onlyOwner() {
@@ -52,6 +50,11 @@ contract YieldFarm {
         }
 
         _;
+    }
+
+    function setTokens(address _stakingToken, address _rewardToken) external onlyOwner {
+        stakingToken = IERC20(_stakingToken);
+        rewardsToken = IERC20(_rewardToken);
     }
 
     function lastTimeRewardApplicable() public view returns (uint) {
@@ -76,6 +79,7 @@ contract YieldFarm {
         totalSupply += _amount;
     }
 
+//can this run if the user has lower balance?
     function withdraw(uint _amount) external updateReward(msg.sender) {
         require(_amount > 0, "amount = 0");
         balanceOf[msg.sender] -= _amount;
