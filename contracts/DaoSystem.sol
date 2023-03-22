@@ -11,7 +11,7 @@ import './DAOLE.sol';
 
 /// @notice WhiteListed addresses that can create their own clubs
 contract WhiteList{
-    mapping(address => bool) whiteList;
+    mapping(address => bool) public whiteList;
     address public owner;
     address public clubFactoryAddress;
     address public leader;
@@ -50,15 +50,15 @@ contract WhiteList{
         _;
     }
 
-/// @notice adds clubFactory address
-/// @param _clubFactoryAddress The clubFactory address
-    function addClubFactoryAddress(address _clubFactoryAddress) external onlyOwner {
-        clubFactoryAddress = _clubFactoryAddress;
+
+    /// @notice Owner can delay launch if needed
+    /// @param _delay The number of days to delay launch
+    function delayCloseTime(uint256 _delay) external onlyOwner onlyOpen {
+        closeTime = closeTime + _delay * 1 days;
     }
 
-/// @notice Adds an address to the WhiteList - only owner.
-/// @dev This is a placeholder. Needs to be updated to burn an NFT to add to the whitelist
-/// @param _address The address to add to the whitelist
+    /// @notice Adds an address to the WhiteList - costs 1000 ONE
+    /// @param _address The address to add to the whitelist
     function addToWhiteList(address _address) external payable onlyOpen {
         require(msg.value == 1000 ether, "not enough ONE");
         require(whiteList[_address]==false, "already whitelisted");
@@ -68,29 +68,29 @@ contract WhiteList{
     function refund() external onlyOpen {
         require(whiteList[msg.sender]==true, "not whitelisted");
         whiteList[msg.sender] = false;
-        payable(owner).transfer(1000 ether);
+        payable(msg.sender).transfer(1000 ether);
     }
 
-/// @notice Owner can delay launch if needed
-/// @param _delay The number of days to delay launch
-    function delayCloseTime(uint256 _delay) external onlyOwner onlyOpen {
-        closeTime = block.timestamp + _delay * 1 days;
+    /// @notice adds clubFactory address
+    /// @param _clubFactoryAddress The clubFactory address
+    function addClubFactoryAddress(address _clubFactoryAddress) external onlyOwner {
+        clubFactoryAddress = _clubFactoryAddress;
     }
 
-/// @notice adds yieldFarm address
-/// @param _yieldFarmAddress The yieldFarm address
+    /// @notice adds yieldFarm address
+    /// @param _yieldFarmAddress The yieldFarm address
     function addYieldFarmAddress(address _yieldFarmAddress) external onlyOwner onlyOpen {
         require(yieldFarmAddress == address(0), "Already set");
         yieldFarmAddress = _yieldFarmAddress;
     }
 
-/// @notice Creates a club for a whitelisted address
+    /// @notice Creates a club for a whitelisted address
     function createClub() external onlyClosed {
         require(whiteList[msg.sender]==true,"not whitelisted");
         ClubFactory(clubFactoryAddress).createClub(msg.sender,address(this));
     }
 
-/// @notice Create the Uniswap V2 pair for the token
+    /// @notice Create the Uniswap V2 pair for the token
     function createPair() external onlyClosed {
         require(msg.sender == leader, "not leader");
         require(liquidityPair == address(0), "pair already created");
@@ -116,7 +116,7 @@ contract WhiteList{
         liquidityPair = factory.getPair(leader, wone);
     }
 
-/// @notice Initializes the YieldFarm contract
+    /// @notice Initializes the YieldFarm contract
     function initializeYieldFarm() external onlyClosed {
         require(msg.sender == leader, "not leader");
         require(liquidityPair != address(0), "no pair");
@@ -323,20 +323,20 @@ contract Voting {
 
     mapping(address => address[]) openProposals;
 
-    Leader leader;
-    TimeLock timeLock;
+    address public leader;
+    address public timeLock;
 
     event VoteCreated(address indexed _suggestedBy, address indexed _proposal, uint _proposalType, uint _time);
     event Voted(address indexed _member, address indexed _proposal, int8 _vote, uint _time);
     event VoteCompleted(address indexed _proposal, bool indexed _accepted, string _proposalType, uint _time);
 
     constructor(address _leader, address _timeLock) {
-        leader = Leader(_leader);
-        timeLock = TimeLock(_timeLock);
+        leader = _leader;
+        timeLock = _timeLock;
     }
 
     modifier onlyClubs {
-        require(leader.isClub(msg.sender),"not a club");
+        require(Leader(leader).isClub(msg.sender),"not a club");
         _;
     }
 
@@ -349,9 +349,9 @@ contract Voting {
         require(!proposals[_proposal].open, "already open");
         //if adding members then require that the member is not already a member
         if(_proposalType == 1){
-            require(leader.clubOfMember(_proposal)==address(0),"is member");
+            require(Leader(leader).clubOfMember(_proposal)==address(0),"is member");
         } else if (_proposalType == 2){
-            require(leader.clubOfMember(_proposal) == leader.clubOfMember(_suggestedBy),"not member of your club");
+            require(Leader(leader).clubOfMember(_proposal) == Leader(leader).clubOfMember(_suggestedBy),"not member of your club");
         }
         // some of these values need to be set to 0 or false because they may have already been a proposal that failed
         proposals[_proposal].proposalType = _proposalType;
@@ -411,14 +411,14 @@ contract Voting {
             emit VoteCompleted(_proposal, true, "addMember", block.timestamp);
             
             // deposit the grant into the timeLock for 4 weeks+
-            leader.increaseAllowance(address(timeLock), proposals[_proposal].grantAmount);
-            timeLock.deposit(_proposal ,proposals[_proposal].grantAmount, 4);
+            Leader(leader).increaseAllowance(address(timeLock), proposals[_proposal].grantAmount);
+            TimeLock(timeLock).deposit(_proposal ,proposals[_proposal].grantAmount, 4);
             
             // add the member to the club
             Club(proposals[_proposal].club).addMember(_proposal, proposals[_proposal].grantAmount);
         } else {
             emit VoteCompleted(_proposal, false, "addMember", block.timestamp);
-            leader.transfer(proposals[_proposal].club, proposals[_proposal].grantAmount);
+            Leader(leader).transfer(proposals[_proposal].club, proposals[_proposal].grantAmount);
         }
     }
 
@@ -634,17 +634,17 @@ contract ClubFactory {
 
 contract Performance {
 
-    Leader leader;
+    address public leader;
     mapping(address => mapping(uint => uint)) public clubPerformance;
     mapping(uint => uint) public totalPerformance;
     
     // constructor - adds leader address
     constructor(address _leader) {
-        leader = Leader(_leader);
+        leader = _leader;
     }
 
     modifier onlyLeader {
-        require(msg.sender == address(leader), "not leader");
+        require(msg.sender == leader, "not leader");
         _;
     }
 

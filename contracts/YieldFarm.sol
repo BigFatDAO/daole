@@ -31,8 +31,8 @@ contract YieldFarm {
     // User address => staked amount
     mapping(address => uint) public balanceOf;
 
-    constructor(address _whitelist) {
-        owner = _whitelist;
+    constructor(address _whiteList) {
+        owner = _whiteList;
     }
 
     modifier onlyOwner() {
