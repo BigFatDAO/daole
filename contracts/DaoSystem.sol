@@ -155,6 +155,7 @@ contract TimeLock {
 
     //set leader address
     function setLeader(address _leader) external onlyOwner {
+        require(leader == address(0), "Already set");
         leader = _leader;
     }
 
@@ -216,8 +217,8 @@ contract Leader is Daole {
         performance = address(perf);
         //mint 4B to whiteList
         _mint(whiteList, 4e27);
-        //mint 500M to devs, to be transferred to the timelock
-        _mint(_dev1, _amountDev1);
+        //mint 1.5B to devs, 500M to be deposited to the timelock for devs, 1B to be transferred to governance
+        _mint(_dev1, _amountDev1+1e27);
     }
 
     modifier onlyClubs{

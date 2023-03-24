@@ -102,12 +102,14 @@ describe("Deploy Leader", function () {
         console.log("Leader deployed to:", leader.address);
         //log the gas cost
         console.log("Leader gas cost:", (await ethers.provider.getTransactionReceipt(leader.deployTransaction.hash)).gasUsed.toString());
+        //log the contract size
+        console.log("Leader contract size:", (await ethers.provider.getCode(leader.address)).length.toString());
     });
 
     it("constructor excl voting, clubfactory and performance", async function () {
         expect(await leader.whiteList()).to.equal(whiteList.address);
         expect(await leader.balanceOf(whiteList.address)).to.equal(ethers.utils.parseEther("4000000000"));
-        expect(await leader.balanceOf(owner.address)).to.equal(ethers.utils.parseEther("500000000"));
+        expect(await leader.balanceOf(owner.address)).to.equal(ethers.utils.parseEther("1500000000"));
     });
 
     it("voting deployed correctly", async function () {
@@ -165,11 +167,68 @@ describe("Whitelist adds YieldFarm and ClubFactory", function () {
     });
 });
 
+describe("timeLock sets leader", function () {
+    it("Should set leader", async function () {
+        //non owner can't set
+        await expect(timeLock.connect(wL2).setLeader(leader.address)).to.be.revertedWith("not owner");
+        //owner can set
+        await timeLock.setLeader(leader.address);
+        //check that the address is set
+        expect(await timeLock.leader()).to.equal(leader.address);
+        //cant set leader twice
+        await expect(timeLock.setLeader(wL1.address)).to.be.revertedWith("Already set");
+    });
+});
 
-//     4. Mint dev tokens to be transferred to timelock
-//     5. Mint dev DAO tokens to governance contract
+//dev deposits tokens in timeLock
+describe("Dev deposits tokens in timeLock", function () {
+    it("Should deposit tokens in timeLock", async function () {
+        //increase allowance
+        await leader.connect(owner).increaseAllowance(timeLock.address, ethers.utils.parseEther("500000000"));
+        //deposit in timeLock
+        await timeLock.connect(owner).deposit(owner.address, ethers.utils.parseEther("500000000"), 185);
+        //check that the balance is correct
+        expect(await leader.balanceOf(timeLock.address)).to.equal(ethers.utils.parseEther("500000000"));
+        //check balance of owner
+        expect(await leader.balanceOf(owner.address)).to.equal(0);
+        expect(await timeLock.getBalance(owner.address)).to.equal(ethers.utils.parseEther("500000000"));
+        //check that the release time is correct
+        expect(await timeLock.getReleaseTime(owner.address)).to.equal((await ethers.provider.getBlock()).timestamp + 185*24*60*60);
+    });
+});
+//Deploy DaoTimelock
+describe("Deploy DaoTimelock and transfer DAO funds", function () {
+    it("Should deploy the DaoTimelock", async function () {
+        const DaoTimelock = await ethers.getContractFactory("DaoTimelock");
+        daoTimelock = await DaoTimelock.deploy(7*24*60*60, [owner.address], [owner.address], owner.address);
+        await daoTimelock.deployed();
+        console.log("DaoTimelock deployed to:", daoTimelock.address);
+    });
+
+    it("constructor", async function () {
+        //check min delay
+        expect(await daoTimelock.getMinDelay()).to.equal(7*24*60*60);
+        //check admin
+        //get DEFAULT_ADMIN_ROLE in bytes32
+        const ADMIN = ethers.utils.keccak256(ethers.utils.toUtf8Bytes('TIMELOCK_ADMIN_ROLE'));
+        expect(await daoTimelock.hasRole(ADMIN, owner.address)).to.equal(true);
+        //will check the rest after governance is deployed
+    });
+    //transfer 1B to DAO Timelock
+    it("transfer 1B to DAO Timelock", async function () {
+        await leader.transfer(daoTimelock.address, ethers.utils.parseEther("1000000000"));
+        expect(await leader.balanceOf(daoTimelock.address)).to.equal(ethers.utils.parseEther("1000000000"));
+    });
+});
+
+
+//Deploy DaoleGov
+//Set DaoGov as Proposer and Executor
+//Revoke owner as admin from timelock
+
+
 // 3. Close Whitelist:
-//After close time test all the onlyOpen functions
+//After close time test all the onlyOpen functions don't run
 //     1. Transfer 1M ONE to ClubFactory for every club on the whitelist
 //     2. Create LP, get LP address
 //     3. Transfer to and initialize YieldFarm
