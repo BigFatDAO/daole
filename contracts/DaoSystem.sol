@@ -25,6 +25,7 @@ contract WhiteList{
     address public liquidityPair;
     uint256 public totalClubs;
     uint256 public closeTime;
+    bool public transferredToClubFactory;
 
 /// @notice adds owner
     constructor(address _router, address _factory, address _wone){
@@ -63,17 +64,27 @@ contract WhiteList{
         require(msg.value == 1000 ether, "not enough ONE");
         require(whiteList[_address]==false, "already whitelisted");
         whiteList[_address] = true;
+        totalClubs += 1;
     }
 
     function refund() external onlyOpen {
         require(whiteList[msg.sender]==true, "not whitelisted");
         whiteList[msg.sender] = false;
         payable(msg.sender).transfer(1000 ether);
+        totalClubs -= 1;
+    }
+
+    /// @notice adds leader address
+    /// @param _leader The leader address
+    function addLeaderAddress(address _leader) external onlyOwner onlyOpen {
+        require(leader == address(0), "Already set");
+        leader = _leader;
     }
 
     /// @notice adds clubFactory address
     /// @param _clubFactoryAddress The clubFactory address
-    function addClubFactoryAddress(address _clubFactoryAddress) external onlyOwner {
+    function addClubFactoryAddress(address _clubFactoryAddress) external onlyOwner onlyOpen {
+        require(clubFactoryAddress == address(0), "Already set");
         clubFactoryAddress = _clubFactoryAddress;
     }
 
@@ -84,9 +95,19 @@ contract WhiteList{
         yieldFarmAddress = _yieldFarmAddress;
     }
 
+    /// @notice transfers 1M Daole for every club to the clubFactory
+    function transferToClubFactory() external onlyClosed {
+        require(transferredToClubFactory == false, "Already transferred");
+        transferredToClubFactory = true;
+        uint amount = totalClubs * 1e24;
+        Leader(leader).transfer(clubFactoryAddress, amount);
+    }
+
     /// @notice Creates a club for a whitelisted address
     function createClub() external onlyClosed {
+        require(transferredToClubFactory == true, "Not transferred");
         require(whiteList[msg.sender]==true,"not whitelisted");
+        whiteList[msg.sender] = false;
         ClubFactory(clubFactoryAddress).createClub(msg.sender,address(this));
     }
 
@@ -623,9 +644,7 @@ contract ClubFactory {
         Club club = new Club(leader, Leader(leader).votingAddress(),timeLock, address(this), _member1);
         Leader(leader).finishCreation(_member1, address(club), _addedBy);
         if(msg.sender == whiteList) {
-            Leader(leader).transfer(address(club), 2250e21);
-            Leader(leader).increaseAllowance(timeLock, 1125e21);
-            TimeLock(timeLock).deposit(_member1, 1125e21,4);
+            Leader(leader).transfer(address(club), 1e24);
         }
         numberOfClubs += 1;
     }

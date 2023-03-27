@@ -74,6 +74,15 @@ describe("WhiteList Tests before close", function () {
         await whiteList.connect(wL1).refund();
         //wL1 balance should be almost 1000 ONE more, except gas
         expect(await ethers.provider.getBalance(wL1.address)).to.be.above(wL1Balance.add(ethers.utils.parseEther("999.9")));
+        //can't refund twice
+        await expect(whiteList.connect(wL1).refund()).to.be.revertedWith("not whitelisted");
+        //add back wL1 for later tests and add wL3 too
+        await whiteList.connect(wL1).addToWhiteList(wL1.address, {value: ethers.utils.parseEther("1000")});
+        await whiteList.connect(wL3).addToWhiteList(wL3.address, {value: ethers.utils.parseEther("1000")});
+    });
+
+    it("check there are 3 clubs", async function () {
+        expect(await whiteList.totalClubs()).to.equal(3);
     });
     //test addClubFactory and addYieldFarm after deploying the contracts
 });
@@ -151,18 +160,23 @@ describe("Deploy YieldFarm", function () {
     });
 });
 //      1. add yieldfarm and clubFactory to whitelist
-describe("Whitelist adds YieldFarm and ClubFactory", function () {
-    it("Should add YieldFarm and ClubFactory", async function () {
+describe("Whitelist adds Leader, YieldFarm and ClubFactory", function () {
+    it("Should add Leader, YieldFarm and ClubFactory", async function () {
         //non owner can't add
+        await expect(whiteList.connect(wL2).addLeaderAddress(leader.address)).to.be.revertedWith("not owner");
         await expect(whiteList.connect(wL2).addClubFactoryAddress(clubFactory.address)).to.be.revertedWith("not owner");
         await expect(whiteList.connect(wL2).addYieldFarmAddress(yieldFarm.address)).to.be.revertedWith("not owner");
         //owner can add
+        await whiteList.addLeaderAddress(leader.address);
         await whiteList.addClubFactoryAddress(clubFactory.address);
         await whiteList.addYieldFarmAddress(yieldFarm.address);
         //check that the addresses are added
+        expect(await whiteList.leader()).to.equal(leader.address);
         expect(await whiteList.clubFactoryAddress()).to.equal(clubFactory.address);
         expect(await whiteList.yieldFarmAddress()).to.equal(yieldFarm.address);
-        //cant add YieldFarm twice
+        //cant add twice
+        await expect(whiteList.addLeaderAddress(leader.address)).to.be.revertedWith("Already set");
+        await expect(whiteList.addClubFactoryAddress(clubFactory.address)).to.be.revertedWith("Already set");
         await expect(whiteList.addYieldFarmAddress(wL1.address)).to.be.revertedWith("Already set");
     });
 });
@@ -190,7 +204,7 @@ describe("Dev deposits tokens in timeLock", function () {
         //check that the balance is correct
         expect(await leader.balanceOf(timeLock.address)).to.equal(ethers.utils.parseEther("500000000"));
         //check balance of owner
-        expect(await leader.balanceOf(owner.address)).to.equal(0);
+        expect(await leader.balanceOf(owner.address)).to.equal(ethers.utils.parseEther("1000000000"));
         expect(await timeLock.getBalance(owner.address)).to.equal(ethers.utils.parseEther("500000000"));
         //check that the release time is correct
         expect(await timeLock.getReleaseTime(owner.address)).to.equal((await ethers.provider.getBlock()).timestamp + 185*24*60*60);
@@ -214,20 +228,105 @@ describe("Deploy DaoTimelock and transfer DAO funds", function () {
         expect(await daoTimelock.hasRole(ADMIN, owner.address)).to.equal(true);
         //will check the rest after governance is deployed
     });
+
     //transfer 1B to DAO Timelock
     it("transfer 1B to DAO Timelock", async function () {
+        //check owner balance
+        expect(await leader.balanceOf(owner.address)).to.equal(ethers.utils.parseEther("1000000000"));
         await leader.transfer(daoTimelock.address, ethers.utils.parseEther("1000000000"));
+        //owner balance should be 0
+        expect(await leader.balanceOf(owner.address)).to.equal(0);
         expect(await leader.balanceOf(daoTimelock.address)).to.equal(ethers.utils.parseEther("1000000000"));
     });
 });
 
-
 //Deploy DaoleGov
-//Set DaoGov as Proposer and Executor
-//Revoke owner as admin from timelock
+describe("Deploy DaoleGov", function () {
+    it("Should deploy the DaoleGov", async function () {
+        const DaoleGov = await ethers.getContractFactory("DaoleGov");
+        daoleGov = await DaoleGov.deploy(leader.address, daoTimelock.address);
+        await daoleGov.deployed();
+        console.log("DaoleGov deployed to:", daoleGov.address);
+        //gas cost
+        console.log("Gas cost of DaoleGov:", (await ethers.provider.getTransactionReceipt(daoleGov.deployTransaction.hash)).gasUsed.toString());
+    });
 
+    it("constructor", async function () {
+        //check token
+        expect(await daoleGov.token()).to.equal(leader.address);
+        //check timelock
+        expect(await daoleGov.timelock()).to.equal(daoTimelock.address);
+    });
+});
+
+//Set DaoGov as Proposer and Executor & Revoke owner as admin from timelock
+describe("Set up dao timelock", function () {
+    it("add governance as proposer and executor", async function () {
+        //grant proposer role
+        const PROPOSER = ethers.utils.keccak256(ethers.utils.toUtf8Bytes('PROPOSER_ROLE'));
+        await daoTimelock.grantRole(PROPOSER, daoleGov.address);
+        expect(await daoTimelock.hasRole(PROPOSER, daoleGov.address)).to.equal(true);
+        //grant executor role
+        const EXECUTOR = ethers.utils.keccak256(ethers.utils.toUtf8Bytes('EXECUTOR_ROLE'));
+        await daoTimelock.grantRole(EXECUTOR, daoleGov.address);
+        expect(await daoTimelock.hasRole(EXECUTOR, daoleGov.address)).to.equal(true);
+    });
+
+    it("revoke owner as proposer, executer and admin", async function () {
+        //revoke proposer role
+        const PROPOSER = ethers.utils.keccak256(ethers.utils.toUtf8Bytes('PROPOSER_ROLE'));
+        await daoTimelock.revokeRole(PROPOSER, owner.address);
+        expect(await daoTimelock.hasRole(PROPOSER, owner.address)).to.equal(false);
+        //revoke executor role
+        const EXECUTOR = ethers.utils.keccak256(ethers.utils.toUtf8Bytes('EXECUTOR_ROLE'));
+        await daoTimelock.revokeRole(EXECUTOR, owner.address);
+        expect(await daoTimelock.hasRole(EXECUTOR, owner.address)).to.equal(false);
+        //revoke admin role
+        const ADMIN = ethers.utils.keccak256(ethers.utils.toUtf8Bytes('TIMELOCK_ADMIN_ROLE'));
+        await daoTimelock.revokeRole(ADMIN, owner.address);
+        expect(await daoTimelock.hasRole(ADMIN, owner.address)).to.equal(false);
+    });
+    it("check owner can't do stuff", async function () {
+        //check owner can't add proposer
+        const PROPOSER = ethers.utils.keccak256(ethers.utils.toUtf8Bytes('PROPOSER_ROLE'));
+        await expect(daoTimelock.connect(owner).grantRole(PROPOSER, owner.address)).to.be.reverted;
+    });
+});
 
 // 3. Close Whitelist:
+describe("Close whitelist", function () {
+    //get whitelist close time and advance the evm past that time
+    it("go past close time", async function () {
+        //get whitelist close time
+        const closeTime = await whiteList.closeTime();
+        //advance the evm past that time
+        await ethers.provider.send("evm_increaseTime", [closeTime.toNumber()]);
+        await ethers.provider.send("evm_mine", []);
+    });
+
+
+    it("check onlyOpen functions", async function () {
+        //check can no longer join whitelist
+        await expect(whiteList.connect(m1).addToWhiteList(m1.address,{value: ethers.utils.parseEther("1000")})).to.be.revertedWith("too late");
+        //can't refund
+        await expect(whiteList.connect(wL1).refund()).to.be.revertedWith("too late");
+    });
+
+    it("check onlyClosed functions", async function () {
+        //revert when whitelist hasn't transferred Daole to ClubFactory
+        await expect(whiteList.connect(wL1).createClub()).to.be.revertedWith("Not transferred");
+        //check club is zero address
+        expect(await leader.clubOfMember(wL1.address)).to.equal(ethers.constants.AddressZero);
+        //transfer to clubFactory
+        await whiteList.transferToClubFactory()
+        //check clubFactory balance
+        expect(await leader.balanceOf(clubFactory.address)).to.equal(ethers.utils.parseEther("3000000"));
+        //check wL1 can create club
+        await whiteList.connect(wL1).createClub();
+        //check club is not zero address
+        expect(await leader.clubOfMember(wL1.address)).to.not.equal(ethers.constants.AddressZero);
+    });
+});
 //After close time test all the onlyOpen functions don't run
 //     1. Transfer 1M ONE to ClubFactory for every club on the whitelist
 //     2. Create LP, get LP address
