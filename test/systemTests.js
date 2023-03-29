@@ -358,22 +358,64 @@ describe("Close whitelist", function () {
         //check LP address is not zero
         expect(await whiteList.liquidityPair()).to.not.equal(ethers.constants.AddressZero);
     });
-    it("initialize YieldFarm", async function () {
+    it("initialize Yield Farm", async function () {
         //initialize yield farm
         await whiteList.initializeYieldFarm();
         //check all the rewards durations and stuff
+        expect(await yieldFarm.duration()).to.equal(7*365*24*60*60);
     });
     it("Set up done", async function () {
         console.log("System is up but not thoroughly tested")
     });
 });
-//After close time test all the onlyOpen functions don't run
-//     1. Transfer 1M ONE to ClubFactory for every club on the whitelist
-//     2. Create LP, get LP address
-//     3. Transfer to and initialize YieldFarm
-//     4. Unlock the createClub function
-// 4. Whitelisted people can create clubs
-//     1. Create a club with 1M tokens
+//test the yield farm 
+describe("Test YieldFarm", function () {
+    it("buy some tokens", async function () {
+        //p1 buys 1000 tokens
+        const deadline = (await ethers.provider.getBlock("latest")).timestamp + 1000;
+        await uniswapRouter.connect(p1).swapExactETHForTokens(0, [wOne.address, leader.address], p1.address, deadline, {value: ethers.utils.parseEther("100")});
+        //check p1 balance
+        p1Balance = await leader.balanceOf(p1.address);
+        console.log("p1 balance: ", ethers.utils.formatEther(p1Balance));
+    });
+
+    it("get LP", async function () {
+        //get LP address
+        const lPAddress = await whiteList.liquidityPair();
+        liquidityPair = await ethers.getContractAt("LP", lPAddress);
+    });
+
+
+
+    it("add liquidity", async function () {
+        //p1 adds liquidity
+        await leader.connect(p1).approve(uniswapRouter.address, p1Balance);
+        const deadline = (await ethers.provider.getBlock("latest")).timestamp + 1000;
+        await uniswapRouter.connect(p1).addLiquidityETH(leader.address, p1Balance, 0, 0, p1.address, deadline, {value: ethers.utils.parseEther("100")});
+        //check p1 LP balance
+        const p1LPBalance = await liquidityPair.balanceOf(p1.address);
+        console.log("p1 LP balance: ", ethers.utils.formatEther(p1LPBalance));
+        //p1 approves yield farm
+        await liquidityPair.connect(p1).approve(yieldFarm.address, p1LPBalance);
+        //p1 stakes LP
+        await yieldFarm.connect(p1).stake(p1LPBalance);
+        //p1 tries to stake more than they have
+        await expect(yieldFarm.connect(p1).stake(p1LPBalance)).to.be.reverted;
+        //check balance after a week
+        await ethers.provider.send("evm_increaseTime", [24*60*60]);
+        await ethers.provider.send("evm_mine", []);
+        await yieldFarm.connect(p1).getReward();
+        p1Balance = await leader.balanceOf(p1.address);
+        console.log("p1 balance after a week: ", ethers.utils.formatEther(p1Balance));
+        //p2 tries to withdraw
+        await expect(yieldFarm.connect(p2).withdraw(ethers.utils.parseEther("100"))).to.be.reverted;
+        //p1 withdrawals
+        await yieldFarm.connect(p1).withdraw(p1LPBalance);
+        expect(await liquidityPair.balanceOf(p1.address)).to.equal(p1LPBalance);
+    });
+});
+
+//clearly needs the whitelist to stake a bit to be burned
 
 
 //In order for the leader contract to deploy, we must first deploy timelock and whitelist
