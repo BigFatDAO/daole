@@ -113,7 +113,6 @@ contract WhiteList{
 
     /// @notice Create the Uniswap V2 pair for the token
     function createPair() external onlyClosed {
-        require(msg.sender == leader, "not leader");
         require(liquidityPair == address(0), "pair already created");
         require(totalClubs > 0, "no clubs");
         //we use the periphery router02 to create and fund the pair 
@@ -123,7 +122,7 @@ contract WhiteList{
         // Approve the router to spend your token
         Leader(leader).approve(address(router), amountDaole);
 
-        // Create the pair
+        // Create the pair with the WONE and 1M daole per club
         router.addLiquidityETH{value: amountOne}(
             leader,
             amountDaole,
@@ -139,10 +138,9 @@ contract WhiteList{
 
     /// @notice Initializes the YieldFarm contract
     function initializeYieldFarm() external onlyClosed {
-        require(msg.sender == leader, "not leader");
         require(liquidityPair != address(0), "no pair");
         //transfer 4B - totalClubs * 1M
-        uint rewards = 4e27 - totalClubs * 1e24;
+        uint rewards = 4e27 - 2 * totalClubs * 1e24;
         Leader(leader).transfer(yieldFarmAddress, rewards);
         //set rewards duration to 7 years
         uint duration = 7 * 365 days;

@@ -11,6 +11,7 @@ const clubMint = 1000000
 
 //get signers, deploy existing contracts (WONE, UniswapV2Factory, UniswapV2Router02)
 before(async function () {
+    console.log("Before: ");
     //wL = Whitelisted accounts, m = Members, p = public, not members
     [owner, wL1, wL2, wL3, m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, p1, p2, p3] = await ethers.getSigners();
 
@@ -18,16 +19,19 @@ before(async function () {
     const WOne = await ethers.getContractFactory("WOne");
     wOne = await WOne.deploy();
     await wOne.deployed();
+    console.log("WOne deployed to:", wOne.address);
 
     //deploy UniswapFactory
     const UniswapFactory = await ethers.getContractFactory("UniswapFactory");
     uniswapFactory = await UniswapFactory.deploy();
     await uniswapFactory.deployed();
+    console.log("UniswapFactory deployed to:", uniswapFactory.address);
 
     //deploy UniswapRouter
     const UniswapRouter = await ethers.getContractFactory("UniswapRouter");
     uniswapRouter = await UniswapRouter.deploy(uniswapFactory.address, wOne.address);
     await uniswapRouter.deployed();
+    console.log("UniswapRouter deployed to:", uniswapRouter.address);
 });
 
 // 1. Deploy Whitelist.
@@ -84,7 +88,14 @@ describe("WhiteList Tests before close", function () {
     it("check there are 3 clubs", async function () {
         expect(await whiteList.totalClubs()).to.equal(3);
     });
-    //test addClubFactory and addYieldFarm after deploying the contracts
+    it("onlyClosed functions won't run", async function () {
+        //can't transfer to clubFactory
+        await expect(whiteList.transferToClubFactory()).to.be.revertedWith("too early")
+        //can't create club
+        await expect(whiteList.connect(wL1).createClub()).to.be.revertedWith("too early")
+        await expect(whiteList.createPair()).to.be.revertedWith("too early")
+        await expect(whiteList.initializeYieldFarm()).to.be.revertedWith("too early") 
+    });
 });
 
 // 2. Deploy Timelock
@@ -310,21 +321,50 @@ describe("Close whitelist", function () {
         await expect(whiteList.connect(m1).addToWhiteList(m1.address,{value: ethers.utils.parseEther("1000")})).to.be.revertedWith("too late");
         //can't refund
         await expect(whiteList.connect(wL1).refund()).to.be.revertedWith("too late");
+        //owner can't delay close time
+        await expect(whiteList.connect(owner).delayCloseTime(100)).to.be.revertedWith("too late");
     });
 
-    it("check onlyClosed functions", async function () {
+    it("check onlyClosed club creation", async function () {
         //revert when whitelist hasn't transferred Daole to ClubFactory
         await expect(whiteList.connect(wL1).createClub()).to.be.revertedWith("Not transferred");
         //check club is zero address
         expect(await leader.clubOfMember(wL1.address)).to.equal(ethers.constants.AddressZero);
+        //check whitelist balance
+        expect(await leader.balanceOf(whiteList.address)).to.equal(ethers.utils.parseEther("4000000000"));
         //transfer to clubFactory
         await whiteList.transferToClubFactory()
+        //check whitelist balance
+        expect(await leader.balanceOf(whiteList.address)).to.equal(ethers.utils.parseEther("3997000000"));
         //check clubFactory balance
         expect(await leader.balanceOf(clubFactory.address)).to.equal(ethers.utils.parseEther("3000000"));
         //check wL1 can create club
         await whiteList.connect(wL1).createClub();
         //check club is not zero address
         expect(await leader.clubOfMember(wL1.address)).to.not.equal(ethers.constants.AddressZero);
+        //get club address
+        wL1ClubAddress = await leader.clubOfMember(wL1.address);
+        //check can't call twice
+        await expect(whiteList.connect(wL1).createClub()).to.be.revertedWith("not whitelisted");
+        //check club balance
+        expect(await leader.balanceOf(wL1ClubAddress)).to.equal(ethers.utils.parseEther("1000000"));
+    });
+
+    it("create LP", async function () {
+        //initializeYieldFarm should revert before pair is created
+        await expect(whiteList.initializeYieldFarm()).to.be.revertedWith("no pair")
+        expect(await whiteList.router()).to.equal(uniswapRouter.address);
+        await whiteList.createPair()
+        //check LP address is not zero
+        expect(await whiteList.liquidityPair()).to.not.equal(ethers.constants.AddressZero);
+    });
+    it("initialize YieldFarm", async function () {
+        //initialize yield farm
+        await whiteList.initializeYieldFarm();
+        //check all the rewards durations and stuff
+    });
+    it("Set up done", async function () {
+        console.log("System is up but not thoroughly tested")
     });
 });
 //After close time test all the onlyOpen functions don't run
