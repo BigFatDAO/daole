@@ -2,8 +2,8 @@
 // copied from https://solidity-by-example.org/defi/staking-rewards/
 
 pragma solidity ^0.8;
-// deployed at 0x690A5aD391618B7ce9430F664412e9CB63f6E950
 
+// deployed at 0x690A5aD391618B7ce9430F664412e9CB63f6E950
 
 contract YieldFarm {
     IERC20 public stakingToken;
@@ -52,7 +52,10 @@ contract YieldFarm {
         _;
     }
 
-    function setTokens(address _stakingToken, address _rewardToken) external onlyOwner {
+    function setTokens(
+        address _stakingToken,
+        address _rewardToken
+    ) external onlyOwner {
         stakingToken = IERC20(_stakingToken);
         rewardsToken = IERC20(_rewardToken);
     }
@@ -79,7 +82,6 @@ contract YieldFarm {
         totalSupply += _amount;
     }
 
-//can this run if the user has lower balance?
     function withdraw(uint _amount) external updateReward(msg.sender) {
         require(_amount > 0, "amount = 0");
         balanceOf[msg.sender] -= _amount;
@@ -139,7 +141,10 @@ interface IERC20 {
 
     function transfer(address recipient, uint amount) external returns (bool);
 
-    function allowance(address owner, address spender) external view returns (uint);
+    function allowance(
+        address owner,
+        address spender
+    ) external view returns (uint);
 
     function approve(address spender, uint amount) external returns (bool);
 

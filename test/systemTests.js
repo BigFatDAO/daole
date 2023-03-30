@@ -358,6 +358,19 @@ describe("Close whitelist", function () {
         //check LP address is not zero
         expect(await whiteList.liquidityPair()).to.not.equal(ethers.constants.AddressZero);
     });
+
+    it("get LP contract", async function () {
+        //get LP address
+        const lPAddress = await whiteList.liquidityPair();
+        liquidityPair = await ethers.getContractAt("LP", lPAddress);
+    });
+
+    it("get whitelist LP balance", async function () {
+        //check LP balance
+        const bal = await liquidityPair.balanceOf(whiteList.address)
+        console.log("LP balance of whitelist: ", ethers.utils.formatEther(bal));
+    });
+
     it("initialize Yield Farm", async function () {
         //initialize yield farm
         await whiteList.initializeYieldFarm();
@@ -379,14 +392,6 @@ describe("Test YieldFarm", function () {
         console.log("p1 balance: ", ethers.utils.formatEther(p1Balance));
     });
 
-    it("get LP", async function () {
-        //get LP address
-        const lPAddress = await whiteList.liquidityPair();
-        liquidityPair = await ethers.getContractAt("LP", lPAddress);
-    });
-
-
-
     it("add liquidity", async function () {
         //p1 adds liquidity
         await leader.connect(p1).approve(uniswapRouter.address, p1Balance);
@@ -402,7 +407,7 @@ describe("Test YieldFarm", function () {
         //p1 tries to stake more than they have
         await expect(yieldFarm.connect(p1).stake(p1LPBalance)).to.be.reverted;
         //check balance after a week
-        await ethers.provider.send("evm_increaseTime", [24*60*60]);
+        await ethers.provider.send("evm_increaseTime", [7*24*60*60]);
         await ethers.provider.send("evm_mine", []);
         await yieldFarm.connect(p1).getReward();
         p1Balance = await leader.balanceOf(p1.address);

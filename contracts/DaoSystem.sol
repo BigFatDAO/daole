@@ -147,6 +147,13 @@ contract WhiteList{
         IYieldFarm(yieldFarmAddress).setTokens(liquidityPair, leader);
         IYieldFarm(yieldFarmAddress).setRewardsDuration(duration);
         IYieldFarm(yieldFarmAddress).notifyRewardAmount(rewards);
+        //stake about a 3rd, burn the rest
+        uint total = IERC20(liquidityPair).balanceOf(address(this)); 
+        uint stake = total / 3;
+        uint burn = total - stake;
+        IERC20(liquidityPair).approve(yieldFarmAddress, stake);
+        IYieldFarm(yieldFarmAddress).stake(stake);
+        IERC20(liquidityPair).transfer(address(0), burn);
     }
 }
 

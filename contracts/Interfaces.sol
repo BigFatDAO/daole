@@ -10,6 +10,8 @@ interface IYieldFarm {
     function setRewardsDuration(uint _duration) external;
 
     function notifyRewardAmount(uint _amount) external;
+
+    function stake(uint _amount) external;
 }
 
 interface IUniswapV2Router02 {
