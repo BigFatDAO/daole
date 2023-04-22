@@ -12,6 +12,8 @@ interface IYieldFarm {
     function notifyRewardAmount(uint _amount) external;
 
     function stake(uint _amount) external;
+
+    function getReward() external;
 }
 
 interface IUniswapV2Router02 {

@@ -374,11 +374,10 @@ describe("Close whitelist", function () {
     it("initialize Yield Farm", async function () {
         //initialize yield farm
         await whiteList.initializeYieldFarm();
+        //check yieldfarm balance
+        expect(await leader.balanceOf(yieldFarm.address)).to.equal(ethers.utils.parseEther("3994000000"));
         //check all the rewards durations and stuff
         expect(await yieldFarm.duration()).to.equal(7*365*24*60*60);
-    });
-    it("Set up done", async function () {
-        console.log("System is up but not thoroughly tested")
     });
 });
 //test the yield farm 
@@ -392,7 +391,7 @@ describe("Test YieldFarm", function () {
         console.log("p1 balance: ", ethers.utils.formatEther(p1Balance));
     });
 
-    it("add liquidity", async function () {
+    it("add liquidity, stake and collect", async function () {
         //p1 adds liquidity
         await leader.connect(p1).approve(uniswapRouter.address, p1Balance);
         const deadline = (await ethers.provider.getBlock("latest")).timestamp + 1000;
@@ -412,6 +411,9 @@ describe("Test YieldFarm", function () {
         await yieldFarm.connect(p1).getReward();
         p1Balance = await leader.balanceOf(p1.address);
         console.log("p1 balance after a week: ", ethers.utils.formatEther(p1Balance));
+        //check whitelist earned
+        const wLEarned = await yieldFarm.earned(whiteList.address);
+        console.log("whitelist earned: ", ethers.utils.formatEther(wLEarned));
         //p2 tries to withdraw
         await expect(yieldFarm.connect(p2).withdraw(ethers.utils.parseEther("100"))).to.be.reverted;
         //p1 withdrawals
@@ -420,11 +422,6 @@ describe("Test YieldFarm", function () {
     });
 });
 
-//clearly needs the whitelist to stake a bit to be burned
-
-
-//In order for the leader contract to deploy, we must first deploy timelock and whitelist
-//Deploy TimeLock:
 
 //Test TimeLock
 //setLeader can be called by owner
@@ -434,20 +431,6 @@ describe("Test YieldFarm", function () {
 //Sets release time correctly
 //can't withdraw before release time
 //Can withdraw after release time
-
-//Deploy whiteList:
-
-//Test whitelist:
-//Check owner can add clubFactory
-//Check non owner can't add clubFactory
-//People can pay 100 ONE to join the whitelist
-//People can't pay less than 100 ONE to join the whitelist
-//People can refund until Leader is launched
-//Can only join whitelist once
-//Can't join whitelist after close date
-//Whitelisted people can create clubs
-//Non whitelisted people can't create clubs
-//Creates an LP with the one and the tokens minted to it from the Leader
 
 //Deploy Leader:
 
