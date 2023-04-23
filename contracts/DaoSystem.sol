@@ -262,6 +262,7 @@ contract Leader is Daole {
         //mint 4B to whiteList
         _mint(whiteList, 4e27);
         //mint 1.5B to devs, 500M to be deposited to the timelock for devs, 1B to be transferred to governance
+        //can mint to other pre-launch devs as well
         _mint(_dev1, _amountDev1 + 1e27);
     }
 

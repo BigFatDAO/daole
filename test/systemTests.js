@@ -1,4 +1,5 @@
-// Testing the contracts in isolation first, then testing the whole system
+// This file tests the deployment sequence of the system, but doesn't yet test all the functionality of the contracts.
+// Read this file to understand the deployment sequence and how the system works.
 
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
@@ -9,7 +10,7 @@ const hundredDays = 60*60*24*100
 const sixMonths = 60*60*24*7*26
 const clubMint = 1000000
 
-//get signers, deploy existing contracts (WONE, UniswapV2Factory, UniswapV2Router02)
+//get signers and deploy existing contracts to local for testing (WONE, UniswapV2Factory, UniswapV2Router02)
 before(async function () {
     console.log("Before: ");
     //wL = Whitelisted accounts, m = Members, p = public, not members
@@ -33,6 +34,13 @@ before(async function () {
     await uniswapRouter.deployed();
     console.log("UniswapRouter deployed to:", uniswapRouter.address);
 });
+
+// The whitelist allows people to pay 1000 ONE to be whitelisted as founding members before the launch of the DAO.
+// I want a trustless launch, but some steps are manual, so people can refund until the whitelist closes.
+// The whitelist will close after the rest of the system has been deployed.
+// This means people can refund if I try to pull shenanigans.
+    // The ONE received will be used to create the  liquidity pool.
+    // This contract also sets up the yield farm.
 
 // 1. Deploy Whitelist.
 describe("WhiteList Tests before close", function () {
@@ -98,6 +106,10 @@ describe("WhiteList Tests before close", function () {
     });
 });
 
+// The timelock is a allows tokens to be locked for a period of time.
+// This will be used to lock the dev tokens for 6 months.
+// This will also be used to lock the clubs' grants for 1 month.
+
 // 2. Deploy Timelock
 describe("Deploy Timelock", function () {
     it("Should deploy the timelock", async function () {
@@ -111,6 +123,10 @@ describe("Deploy Timelock", function () {
         expect(await timeLock.owner()).to.equal(owner.address);
     });
 });
+
+// The Leader is the main contract of the DAO. It is an ERC20 token called DAOLE.
+// It holds the mappings for which clubs are in the DAO, and which members are in each club, and which members where added by which club.
+// It mints tokens monthly to the clubs based on their performance.
 
 // 3. Deploy Leader
 describe("Deploy Leader", function () {
@@ -132,6 +148,7 @@ describe("Deploy Leader", function () {
         expect(await leader.balanceOf(owner.address)).to.equal(ethers.utils.parseEther("1500000000"));
     });
 
+    // the voting contract allows clubs to add and remove members, and to vote on proposals.
     it("voting deployed correctly", async function () {
         const votingAddress = await leader.votingAddress();
         voting = await ethers.getContractAt("Voting", votingAddress);
@@ -139,6 +156,7 @@ describe("Deploy Leader", function () {
         expect (await voting.timeLock()).to.equal(timeLock.address);
     });
 
+    // the clubfactory contract cretes the clubs, it exists to reduce the size of the leader contract.
     it("clubfactory deployed correctly", async function () {
         const clubFactoryAddress = await leader.clubFactoryAddress();
         clubFactory = await ethers.getContractAt("ClubFactory",clubFactoryAddress);
@@ -148,6 +166,8 @@ describe("Deploy Leader", function () {
         expect (await clubFactory.numberOfClubs()).to.equal(0);
     });
 
+    // the performance contract calculates the performance of the clubs.
+    // I may bring this functionality back into the leader contract
     it("performance deployed correctly", async function () {
         const performanceAddress = await leader.performance();
         performance = await ethers.getContractAt("Performance",performanceAddress);
@@ -156,6 +176,9 @@ describe("Deploy Leader", function () {
     
 
 });
+
+// Stake the DAOLE/ONE LP in the YieldFarm to earn more DAOLE
+
 //     3. Deploy YieldFarm
 describe("Deploy YieldFarm", function () {
     it("Should deploy the YieldFarm", async function () {
@@ -170,7 +193,8 @@ describe("Deploy YieldFarm", function () {
         expect(await yieldFarm.owner()).to.equal(whiteList.address);
     });
 });
-//      1. add yieldfarm and clubFactory to whitelist
+
+//      1. add yieldfarm and clubFactory addresses to whitelist
 describe("Whitelist adds Leader, YieldFarm and ClubFactory", function () {
     it("Should add Leader, YieldFarm and ClubFactory", async function () {
         //non owner can't add
@@ -192,6 +216,7 @@ describe("Whitelist adds Leader, YieldFarm and ClubFactory", function () {
     });
 });
 
+//     2. add leader address to the timeLock
 describe("timeLock sets leader", function () {
     it("Should set leader", async function () {
         //non owner can't set
@@ -205,7 +230,7 @@ describe("timeLock sets leader", function () {
     });
 });
 
-//dev deposits tokens in timeLock
+//dev deposits tokens in timeLock - this will be a manual step the  people can check has occured before refunds on the whitelist close.
 describe("Dev deposits tokens in timeLock", function () {
     it("Should deposit tokens in timeLock", async function () {
         //increase allowance
@@ -221,6 +246,9 @@ describe("Dev deposits tokens in timeLock", function () {
         expect(await timeLock.getReleaseTime(owner.address)).to.equal((await ethers.provider.getBlock()).timestamp + 185*24*60*60);
     });
 });
+
+// DaoTimelock and DaoleGov are OpenZeppelin contracts that have not been modified. This is a "standard" DAO implementation that allows token weighted voting by the entire community. It is used to vote on the allocation of funds from the DAO treasury. As opposed to the funds that are controlled by the clubs. Check out the Tokenomics section of the website for more details.
+
 //Deploy DaoTimelock
 describe("Deploy DaoTimelock and transfer DAO funds", function () {
     it("Should deploy the DaoTimelock", async function () {
@@ -240,7 +268,7 @@ describe("Deploy DaoTimelock and transfer DAO funds", function () {
         //will check the rest after governance is deployed
     });
 
-    //transfer 1B to DAO Timelock
+    //transfer 1B to DAO Timelock - these are the dev tokens that will be used to fund the DAO treasury. This is a manual step that the people can check has occured before refunds on the whitelist close.
     it("transfer 1B to DAO Timelock", async function () {
         //check owner balance
         expect(await leader.balanceOf(owner.address)).to.equal(ethers.utils.parseEther("1000000000"));
@@ -303,6 +331,8 @@ describe("Set up dao timelock", function () {
         await expect(daoTimelock.connect(owner).grantRole(PROPOSER, owner.address)).to.be.reverted;
     });
 });
+
+// Now the system has been fully deployed and tokens have been locked up, the whitelist closes and the system is launched.
 
 // 3. Close Whitelist:
 describe("Close whitelist", function () {
