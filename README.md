@@ -22,7 +22,7 @@ This repo is open source and contains all the code for the project.
 4. cd ..
 5. npx hardhat node
 6. Open a new terminal:
-7. npx hardhat run scripts/deploy.js --network localhost
+7. npx hardhat run scripts/deploy.js
 8. cd frontend
 9. npm start
 

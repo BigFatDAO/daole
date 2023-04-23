@@ -2,12 +2,12 @@
 // copied from https://solidity-by-example.org/defi/staking-rewards/
 
 pragma solidity ^0.8;
+
 // deployed at 0x690A5aD391618B7ce9430F664412e9CB63f6E950
 
-
 contract YieldFarm {
-    IERC20 public immutable stakingToken;
-    IERC20 public immutable rewardsToken;
+    IERC20 public stakingToken;
+    IERC20 public rewardsToken;
 
     address public owner;
 
@@ -31,10 +31,8 @@ contract YieldFarm {
     // User address => staked amount
     mapping(address => uint) public balanceOf;
 
-    constructor(address _stakingToken, address _rewardToken) {
-        owner = msg.sender;
-        stakingToken = IERC20(_stakingToken);
-        rewardsToken = IERC20(_rewardToken);
+    constructor(address _whiteList) {
+        owner = _whiteList;
     }
 
     modifier onlyOwner() {
@@ -52,6 +50,14 @@ contract YieldFarm {
         }
 
         _;
+    }
+
+    function setTokens(
+        address _stakingToken,
+        address _rewardToken
+    ) external onlyOwner {
+        stakingToken = IERC20(_stakingToken);
+        rewardsToken = IERC20(_rewardToken);
     }
 
     function lastTimeRewardApplicable() public view returns (uint) {
@@ -135,7 +141,10 @@ interface IERC20 {
 
     function transfer(address recipient, uint amount) external returns (bool);
 
-    function allowance(address owner, address spender) external view returns (uint);
+    function allowance(
+        address owner,
+        address spender
+    ) external view returns (uint);
 
     function approve(address spender, uint amount) external returns (bool);
 
@@ -148,6 +157,3 @@ interface IERC20 {
     event Transfer(address indexed from, address indexed to, uint value);
     event Approval(address indexed owner, address indexed spender, uint value);
 }
-
-//Anon Acc staked 99000000000000000000 at 11:15 on feb 18
-// Account 2 staked 20000000000000000000 at 11:15 on feb 18

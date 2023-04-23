@@ -1,5 +1,4 @@
 //test file
-const { days } = require("@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time/duration");
 const { expect, assert } = require("chai");
 const chai = require('chai');
 const chaiAlmost = require('chai-almost');
@@ -384,7 +383,7 @@ describe('Basic Set up', function () {
         await transfer(bigDog.address, transferAmount)
         expect(await leader.balanceOf(bigDog.address)).to.equal(balanceAmount)
 
-        // caclulate grants and pay
+        // calculate grants and pay
         totalSupply = BigInt(await leader.totalSupply())
         totalGrants = calculateGrant(totalSupply)
 
@@ -479,7 +478,7 @@ describe('Basic Set up', function () {
     //or burn without minting
 });
 
-describe('test trasactions', function () {
+describe('test transactions', function () {
     it('transfers from leader to eve', async function () {
         const godBal = BigInt(await leader.balanceOf(god.address))
         const eveBal = BigInt(await leader.balanceOf(eve.address))
