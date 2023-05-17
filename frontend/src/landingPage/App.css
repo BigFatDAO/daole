@@ -1,13 +1,12 @@
 /* the css for the landing page */
 
-section{
-    height: 100vh;
-    width: 100vw;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-
+section {
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
 .app {
@@ -22,7 +21,7 @@ section{
   background-size: 70px;
   background-attachment: fixed;
   background-repeat: repeat;
-  }
+}
 
 .app-logo {
   height: 20vh;
@@ -41,108 +40,108 @@ section{
   scroll-snap-align: start;
 }
 
-.app-title{
-    font-size: 50px;
-    font-weight: bold;
-    color: #61d9fa;
+.app-title {
+  font-size: 50px;
+  font-weight: bold;
+  color: #61d9fa;
 }
 
-.app-subtitle{
-    font-size: 30px;
-    font-weight: bold;
-    color: #61dafb;
+.app-subtitle {
+  font-size: 30px;
+  font-weight: bold;
+  color: #61dafb;
 }
 
 .app-body-intro {
-    height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    font-size: calc(10px + 2vmin);
-    color: white;
-    scroll-snap-align: start;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(10px + 2vmin);
+  color: white;
+  scroll-snap-align: start;
 }
 
 .app-body {
-    height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    font-size: calc(10px + 2vmin);
-    scroll-snap-align: start;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(10px + 2vmin);
+  scroll-snap-align: start;
 }
 
-.app-timeline{
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    font-size: calc(10px + 2vmin);
-    min-height: 100vh;
-    height: fit-content;
-    scroll-snap-align: start;
+.app-timeline {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(10px + 2vmin);
+  min-height: 100vh;
+  height: fit-content;
+  scroll-snap-align: start;
 }
 
-.app-tokenomics{
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    font-size: calc(10px + 2vmin);
-    min-height: 100vh;
-    height: fit-content;
-    scroll-snap-align: start;
+.app-tokenomics {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(10px + 2vmin);
+  min-height: 100vh;
+  height: fit-content;
+  scroll-snap-align: start;
 }
 
 .app-intro {
-    font-size: calc(10px + 1.4vmin);
-    width: 80%;
-    text-align: center;
-    list-style-type: square;
-    list-style-position: inside;
-    color: #ddf8ff;
+  font-size: calc(10px + 1.4vmin);
+  width: 80%;
+  text-align: center;
+  list-style-type: square;
+  list-style-position: inside;
+  color: #ddf8ff;
 }
 
 .app-section-title {
-    font-size: calc(10px + 2vmin);
-    width: 80%;
-    text-align: left;
-    list-style-type: square;
-    list-style-position: inside;
-    margin-bottom: 20px;
-    color: #61fb6b;
+  font-size: calc(10px + 2vmin);
+  width: 80%;
+  text-align: left;
+  list-style-type: square;
+  list-style-position: inside;
+  margin-bottom: 20px;
+  color: #61fb6b;
 }
 
 .app-body-text {
-    font-size: calc(10px + 1.1vmin);
-    width: 80%;
-    text-align: left;
-    list-style-type: square;
-    list-style-position: inside;
-    color: #ddf8ff;
+  font-size: calc(10px + 1.1vmin);
+  width: 80%;
+  text-align: left;
+  list-style-type: square;
+  list-style-position: inside;
+  color: #ddf8ff;
 }
 
-.app-body-text-center{
-    font-size: calc(10px + 1.1vmin);
-    width: 80%;
-    text-align: center;
-    list-style-type: square;
-    list-style-position: inside;
-    color: #ddf8ff;
+.app-body-text-center {
+  font-size: calc(10px + 1.1vmin);
+  width: 80%;
+  text-align: center;
+  list-style-type: square;
+  list-style-position: inside;
+  color: #ddf8ff;
 }
 
 .app-footer {
-    height: 20vh;
-    margin-top: 15px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    font-size: calc(10px + 2vmin);
-    color: #61fb6b;
-    scroll-snap-align: start;
+  height: 20vh;
+  margin-top: 15px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(10px + 2vmin);
+  color: #61fb6b;
+  scroll-snap-align: start;
 }
 
 .app-link {
@@ -150,84 +149,107 @@ section{
 }
 
 .app-buttons {
-    display: flex;
-    flex-direction: row;
-    justify-content: space-around;
-    max-width: fit-content;
-    flex-wrap: wrap;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-around;
+  max-width: fit-content;
+  flex-wrap: wrap;
 }
 
 .app-button {
-    width: 200px;
-    height: 50px;
-    border-radius: 10px;
-    border: 2px solid #61fb6b;
-    background-color: #282c34;
-    color: #61dafb;
-    font-size: 20px;
-    font-weight: bold;
-    cursor: pointer;
-    align-items: center;
-    justify-content: center;
-    margin: 20px;
+  width: 200px;
+  height: 50px;
+  border-radius: 10px;
+  border: 2px solid #61fb6b;
+  background-color: #282c34;
+  color: #61dafb;
+  font-size: 20px;
+  font-weight: bold;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  margin: 20px;
 }
 
-.app-contact-title{
-    font-size: calc(10px + 2vmin);
-    width: 80%;
-    text-align: center;
-    list-style-type: square;
-    list-style-position: inside;
-    margin-bottom: 10px;
-    color: #61fb6b;
+.app-contact-title {
+  font-size: calc(10px + 2vmin);
+  width: 80%;
+  text-align: center;
+  list-style-type: square;
+  list-style-position: inside;
+  margin-bottom: 10px;
+  color: #61fb6b;
 }
 
-.app-contacts{
-    display: flex;
-    flex-direction: row;
-    justify-content: space-around;
-    max-width: fit-content;
-    flex-wrap: wrap;
+.app-contacts {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-around;
+  max-width: fit-content;
+  flex-wrap: wrap;
 }
 
-.nothing{
-    color: #c314ae;
-    background: #a7bea9;
-    color: #00b1e2;
+.nothing {
+  color: #c314ae;
+  background: #a7bea9;
+  color: #00b1e2;
 }
 
-.app-contact{
-    cursor: pointer;
-    align-items: center;
-    justify-content: center;
-    margin: 20px;
+.app-contact {
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  margin: 20px;
 }
 
-.sankey{
+.sankey {
   max-height: 60vh;
   max-width: 80vw;
 }
 
-.pie-container{
+.pie-container {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  max-width: fit-content;
+  flex-wrap: wrap;
+  font-size: medium;
+}
+
+.custom-tooltip {
+  background-color: #282c34;
+  color: #61dafb;
+  border: 1px solid #61fb6b;
+  border-radius: 5px;
+  padding: 10px;
+  font-size: 14px;
+  max-width: 300px;
+}
+
+.dapp {
+  position: relative;
+  background-color: black;
+  height: 100vh;
+  width: 100vw;
+}
+
+.dapp-background-image {
+  height: 100%;
+  width: 100%;
+  background-image: url("../DaoleBG3.png");
+  background-position: calc(30% + 33.33vw) calc(80% - 22vh);
+  background-repeat: no-repeat;
+  position: absolute;
+  top: 0;
+  right: 0;
+  background-size: calc(800px + 15%)  auto;
+}
+
+.dapp-main{
     display: flex;
-    flex-direction: row;
-    justify-content: center;
-    align-items: center;
-    height: 100%;
-    max-width: fit-content;
-    flex-wrap: wrap;
-    font-size: medium;
-}
-
-.custom-tooltip{
-    background-color: #282c34;
+    flex-direction: column;
     color: #61dafb;
-    border: 1px solid #61fb6b;
-    border-radius: 5px;
-    padding: 10px;
-    font-size: 14px;
-    max-width: 300px;
 }
-
-
 

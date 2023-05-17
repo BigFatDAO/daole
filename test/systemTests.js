@@ -143,6 +143,8 @@ describe("Deploy Leader", function () {
     });
 
     it("constructor excl voting, clubfactory and performance", async function () {
+        expect(await leader.name()).to.equal("Daole");
+        expect(await leader.symbol()).to.equal("DAOLE");
         expect(await leader.whiteList()).to.equal(whiteList.address);
         expect(await leader.balanceOf(whiteList.address)).to.equal(ethers.utils.parseEther("4000000000"));
         expect(await leader.balanceOf(owner.address)).to.equal(ethers.utils.parseEther("1500000000"));

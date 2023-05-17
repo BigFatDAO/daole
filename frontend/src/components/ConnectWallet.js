@@ -2,7 +2,7 @@ import React from "react";
 
 import { NetworkErrorMessage } from "./NetworkErrorMessage";
 
-function ConnectWallet({ connectWallet, networkError, dismiss }) {
+export function ConnectWallet({ connectWallet, networkError, dismiss }) {
   return (
     <div className="container">
       <div className="row justify-content-md-center">
@@ -29,5 +29,3 @@ function ConnectWallet({ connectWallet, networkError, dismiss }) {
     </div>
   );
 }
-
-export default ConnectWallet;

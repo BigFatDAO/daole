@@ -11,11 +11,18 @@ import { ethers } from "ethers";
 //import leader abi and address
 import LeaderArtifact from "../contracts/Leader.json";
 import LeaderAddress from "../contracts/Leader-address.json";
+//import the whitelist abi and address
+import WhiteListArtifact from "../contracts/WhiteList.json";
+import WhiteListAddress from "../contracts/WhiteList-address.json";
 //import connectwallet component
-import ConnectWallet from "./ConnectWallet";
-import NoWalletDetected from "./NoWalletDetected";
-import Loading from "./Loading";
+import { ConnectWallet } from "./ConnectWallet";
+import { NoWalletDetected } from "./NoWalletDetected";
+import { Loading } from "./Loading";
+import { MemberDash } from "./MemberDash";
+import { NotMemberDash } from "./NotMemberDash";
+import { PreLaunch } from "./PreLaunch";
 import "../landingPage/App.css";
+import Navbar from "./Navbar";
 
 const leaderAddress = LeaderAddress.Address;
 const HARDHAT_NETWORK_ID = "1337";
@@ -31,12 +38,20 @@ export class Dapp extends Component {
       // The user's address and balance
       selectedAddress: undefined,
       balance: undefined,
+      clubOfMember: undefined,
+      whitelistClosed: true,
+      blockTime: undefined,
       // The ID about transactions being sent, and any possible error with them
       txBeingSent: undefined,
       transactionError: undefined,
       networkError: undefined,
     };
     this.state = this.initialState;
+  }
+
+  // This method initializes the dapp
+  async componentDidMount() {
+    await this._connectWallet();
   }
 
   render() {
@@ -62,10 +77,33 @@ export class Dapp extends Component {
     }
 
     return (
-      <div className="App">
-        <header className="App-header">
-          <h1>Leaderboard</h1>
-        </header>
+      <div className="dapp">
+        <div className="dapp-background-image"></div>
+        <Navbar page={"preLaunch"} />
+        <div className="dapp-main">
+          {/* now we add the components */}
+          {this.state.whitelistClosed ? (
+            <>
+              {this.state.clubOfMember ? (
+                <MemberDash
+                  leader={this._leader}
+                  clubOfMember={this.state.clubOfMember}
+                  address={this.state.selectedAddress}
+                />
+              ) : (
+                <NotMemberDash
+                  leader={this._leader}
+                  address={this.state.selectedAddress}
+                />
+              )}
+            </>
+          ) : (
+            <PreLaunch
+              address={this.state.selectedAddress}
+              whitelist={this._whitelist}
+            />
+          )}
+        </div>
       </div>
     );
   }
@@ -106,13 +144,13 @@ export class Dapp extends Component {
     });
   }
 
-  _initialize(userAddress) {
+  async _initialize(userAddress) {
     this.setState({
       selectedAddress: userAddress,
     });
-    this._initializeEthers();
-    this._getTokenData();
-    this._startPollingData();
+    await this._initializeEthers();
+    await this._getTokenData();
+    await this._startPollingData();
   }
 
   async _initializeEthers() {
@@ -125,15 +163,21 @@ export class Dapp extends Component {
       LeaderArtifact.abi,
       this._provider.getSigner(0)
     );
-    
+
+    this._whitelist = new ethers.Contract(
+      WhiteListAddress.Address,
+      WhiteListArtifact.abi,
+      this._provider.getSigner(0)
+    );
   }
 
   // initialize the app, as we do with the token data.
   _startPollingData() {
-    this._pollDataInterval = setInterval(() => this._updateBalance(), 100000);
+    this._pollDataInterval = setInterval(() => this._updateBalance(), 10000);
 
     // We run it once immediately so we don't have to wait for it
     this._updateBalance();
+    this._whitelistClosed();
   }
 
   _stopPollingData() {
@@ -147,6 +191,21 @@ export class Dapp extends Component {
     this.setState({ balance });
   }
 
+  // Check if the whitelist is closed
+  async _whitelistClosed() {
+    //get current blocktime
+    const blockTime = (await this._provider.getBlock()).timestamp;
+    this.setState({ blockTime });
+    //get whitelist close time
+    const whitelistCloseTime = await this._whitelist.closeTime();
+    //check if whitelist is closed
+    if (blockTime > whitelistCloseTime) {
+      this.setState({ whitelistClosed: true });
+    } else {
+      this.setState({ whitelistClosed: false });
+    }
+  }
+
   async _getTokenData() {
     const name = await this._leader.name();
     const symbol = await this._leader.symbol();
@@ -154,8 +213,15 @@ export class Dapp extends Component {
     this.setState({ tokenData: { name, symbol } });
   }
 
-   // This method just clears part of the state.
-   _dismissTransactionError() {
+  async _clubOfMember() {
+    const clubOfMember = await this._leader.clubOfMember(
+      this.state.selectedAddress
+    );
+    this.setState({ clubOfMember });
+  }
+
+  // This method just clears part of the state.
+  _dismissTransactionError() {
     this.setState({ transactionError: undefined });
   }
 
@@ -179,17 +245,16 @@ export class Dapp extends Component {
     this.setState(this.initialState);
   }
 
-  // This method checks if Metamask selected network is Localhost:8545 
+  // This method checks if Metamask selected network is Localhost:8545
   _checkNetwork() {
     if (window.ethereum.networkVersion === HARDHAT_NETWORK_ID) {
       return true;
     }
 
-    this.setState({ 
-      networkError: 'Please connect Metamask to Localhost:8545'
+    this.setState({
+      networkError: "Please connect Metamask to Localhost:8545",
     });
 
     return false;
   }
-
 }

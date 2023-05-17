@@ -1,5 +1,5 @@
 // Deploy the contracts. We'll need to put a delay in here to do the second half of the deployment. Or do it manually.
-//deploy command: npx hardhat run scripts/deploy.js
+//deploy command: npx hardhat run --network localhost scripts/deploy.js
 
 const path = require("path");
 const { ethers } = require("hardhat");
@@ -7,8 +7,7 @@ const { ethers } = require("hardhat");
 //get signers, deploy existing contracts (WONE, UniswapV2Factory, UniswapV2Router02)
 async function main() {
   //wL = Whitelisted accounts, m = Members, p = public, not members
-  [owner, wL1, wL2, wL3, m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, p1, p2, p3] =
-    await ethers.getSigners();
+  [owner, wL1, wL2, wL3, m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, p1, p2, p3] = await ethers.getSigners();
 
   //Localnet only:
   //deploy WONE
@@ -154,6 +153,7 @@ async function main() {
     ethers.utils.toUtf8Bytes("TIMELOCK_ADMIN_ROLE")
   );
   await daoTimelock.revokeRole(ADMIN, owner.address);
+
 /*
   // 3. Close Whitelist:
   //get whitelist close time

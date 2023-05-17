@@ -1,6 +1,6 @@
 import React from "react";
 
-function NoWalletDetected() {
+export function NoWalletDetected() {
   return (
     <div className="container">
       <div className="row justify-content-md-center">
@@ -22,5 +22,3 @@ function NoWalletDetected() {
     </div>
   );
 }
-
-export default NoWalletDetected;
