@@ -6,7 +6,7 @@ export function PreLaunch(props) {
   const [isLoading, setIsLoading] = useState(false);
   const [clubCount, setClubCount] = useState();
   const [isWhitelisted, setIsWhitelisted] = useState();
-  const [error, setError] = useState();
+  // const [error, setError] = useState();
   numberOfClubs();
   whiteListed();
 
